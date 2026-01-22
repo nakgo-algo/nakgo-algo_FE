@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { fishingZones, zoneStyles } from '../data/fishingZones'
 
 const KAKAO_APP_KEY = 'b9b5e7099ba2f552e538754158f6bac2'
 
@@ -73,49 +74,28 @@ export default function KakaoMap({ userLocation, defaultCenter, onMapReady }) {
     }
   }
 
-  // GeoJSON 낚시금지구역 로드
-  const loadFishingZones = async (map) => {
-    try {
-      const response = await fetch('/fishing-zones.json')
-      const data = await response.json()
-
-      let geometries = []
-
-      // GeometryCollection 또는 FeatureCollection 처리
-      if (data.type === 'GeometryCollection') {
-        geometries = data.geometries
-      } else if (data.type === 'FeatureCollection') {
-        geometries = data.features.map(f => f.geometry)
-      }
-
-      geometries.forEach((geometry) => {
-        if (geometry.type === 'Polygon') {
-          createPolygon(map, geometry.coordinates)
-        } else if (geometry.type === 'MultiPolygon') {
-          geometry.coordinates.forEach((coords) => {
-            createPolygon(map, coords)
-          })
-        }
-      })
-    } catch (err) {
-      console.error('낚시금지구역 로드 실패:', err)
-    }
+  // 낚시 금지/제한 구역 로드
+  const loadFishingZones = (map) => {
+    fishingZones.forEach((zone) => {
+      createPolygon(map, zone)
+    })
   }
 
   // 폴리곤 생성
-  const createPolygon = (map, coordinates) => {
-    // coordinates[0]이 외곽선
-    const path = coordinates[0].map(
-      (coord) => new window.kakao.maps.LatLng(coord[1], coord[0])
+  const createPolygon = (map, zone) => {
+    const path = zone.coordinates.map(
+      (coord) => new window.kakao.maps.LatLng(coord.lat, coord.lng)
     )
+
+    const style = zoneStyles[zone.type]
 
     const polygon = new window.kakao.maps.Polygon({
       path: path,
-      strokeWeight: 2,
-      strokeColor: '#CC3333',
-      strokeOpacity: 0.7,
-      fillColor: '#CC3333',
-      fillOpacity: 0.35
+      strokeWeight: style.strokeWeight,
+      strokeColor: style.strokeColor,
+      strokeOpacity: style.strokeOpacity,
+      fillColor: style.fillColor,
+      fillOpacity: style.fillOpacity
     })
 
     polygon.setMap(map)
@@ -123,13 +103,15 @@ export default function KakaoMap({ userLocation, defaultCenter, onMapReady }) {
     // 클릭 시 강조
     window.kakao.maps.event.addListener(polygon, 'click', () => {
       polygon.setOptions({
-        fillOpacity: 0.6,
-        strokeWeight: 3
+        fillOpacity: style.selectedFillOpacity,
+        strokeWeight: style.selectedStrokeWeight,
+        strokeOpacity: style.selectedStrokeOpacity
       })
       setTimeout(() => {
         polygon.setOptions({
-          fillOpacity: 0.35,
-          strokeWeight: 2
+          fillOpacity: style.fillOpacity,
+          strokeWeight: style.strokeWeight,
+          strokeOpacity: style.strokeOpacity
         })
       }, 500)
     })

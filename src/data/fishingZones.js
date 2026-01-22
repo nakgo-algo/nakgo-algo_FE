@@ -103,25 +103,25 @@ export const fishingZones = [
 // 구역 타입별 스타일 설정
 export const zoneStyles = {
   prohibited: {
-    fillColor: '#8B4D4D',      // 붉은 계열 (채도 낮음)
-    fillOpacity: 0.35,
-    strokeColor: '#6B3D3D',
+    fillColor: '#CC3333',      // 빨강 (금지)
+    fillOpacity: 0.4,
+    strokeColor: '#CC3333',
     strokeWeight: 2,
-    strokeOpacity: 0.6,
+    strokeOpacity: 0.8,
     // 선택됐을 때 스타일
-    selectedFillOpacity: 0.55,
+    selectedFillOpacity: 0.6,
     selectedStrokeWeight: 3,
-    selectedStrokeOpacity: 0.9,
+    selectedStrokeOpacity: 1,
   },
   restricted: {
-    fillColor: '#9E8B4D',      // 노랑/주황 계열 (채도 낮음)
-    fillOpacity: 0.35,
-    strokeColor: '#7E6B3D',
+    fillColor: '#E67E22',      // 주황 (제한)
+    fillOpacity: 0.4,
+    strokeColor: '#E67E22',
     strokeWeight: 2,
-    strokeOpacity: 0.6,
+    strokeOpacity: 0.8,
     // 선택됐을 때 스타일
-    selectedFillOpacity: 0.55,
+    selectedFillOpacity: 0.6,
     selectedStrokeWeight: 3,
-    selectedStrokeOpacity: 0.9,
+    selectedStrokeOpacity: 1,
   }
 }

@@ -68,7 +68,7 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
       </div>
 
       {/* 범례 - 간단한 점 표시 */}
-      <div style={{ position: 'absolute', bottom: '140px', left: '16px', zIndex: 20 }}>
+      <div style={{ position: 'absolute', bottom: '24px', left: '16px', zIndex: 20 }}>
         <div className="flex flex-col gap-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
           <div className="flex items-center gap-2">
             <div

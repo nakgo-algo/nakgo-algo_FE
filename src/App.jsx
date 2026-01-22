@@ -5,21 +5,12 @@ import RegulationsPage from "./components/RegulationsPage";
 import FinesPage from "./components/FinesPage";
 import CameraPage from "./components/CameraPage";
 import SwimmingFish from "./components/SwimmingFish";
-
-const pages = ["map", "check", "regulations", "fines", "camera"];
-
-// 👇 기능명 → 사용자 행동 중심
-const navLabels = [
-  "위치 보기",
-  "위반 판단",
-  "규정 확인",
-  "벌금 안내",
-  "AI 분석",
-];
+import Sidebar from "./components/Sidebar";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState("map");
   const [locationStatus, setLocationStatus] = useState("pending");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handleLocationAllow = () => {
     if (navigator.geolocation) {
@@ -63,61 +54,44 @@ export default function App() {
       {/* Swimming Fish Background (지도 페이지 제외) */}
       {currentPage !== "map" && <SwimmingFish />}
 
-      {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-50 px-5 pt-[env(safe-area-inset-top)] h-14 flex items-center">
-        <div className="flex flex-col leading-none">
-          <span className="font-sans text-[17px] font-semibold tracking-[0.06em] text-white/90">
-            낚고
-          </span>
-          <span className="font-sans text-[17px] font-light tracking-[0.1em] text-white/50">
-            알고
-          </span>
+      {/* Hamburger Button */}
+      <button
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        className="fixed top-0 left-0 z-50 mt-[env(safe-area-inset-top)] ml-4 w-12 h-12 flex items-center justify-center bg-transparent border-none cursor-pointer"
+        aria-label="메뉴 열기"
+      >
+        <div
+          className="w-6 h-5 flex flex-col justify-between transition-all duration-300"
+          style={{ transform: isSidebarOpen ? 'rotate(0deg)' : 'rotate(0deg)' }}
+        >
+          <span
+            className={`block h-[2px] bg-white/80 rounded-full transition-all duration-300 origin-left ${
+              isSidebarOpen ? 'rotate-45 translate-x-[1px] translate-y-[-1px] w-[26px]' : 'w-6'
+            }`}
+          />
+          <span
+            className={`block h-[2px] bg-white/80 rounded-full transition-all duration-300 ${
+              isSidebarOpen ? 'opacity-0 w-0' : 'opacity-100 w-4'
+            }`}
+          />
+          <span
+            className={`block h-[2px] bg-white/80 rounded-full transition-all duration-300 origin-left ${
+              isSidebarOpen ? '-rotate-45 translate-x-[1px] translate-y-[1px] w-[26px]' : 'w-5'
+            }`}
+          />
         </div>
-      </header>
+      </button>
+
+      {/* Sidebar */}
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        currentPage={currentPage}
+        onNavigate={setCurrentPage}
+      />
 
       {/* Page Content */}
       <main className="flex-1 relative overflow-hidden">{renderPage()}</main>
-
-      {/* Bottom Navigation */}
-      <nav className="absolute bottom-0 left-0 right-0 z-50 pb-[env(safe-area-inset-bottom)]">
-        <div className="mx-4 mb-4 glass-strong flex justify-around items-center h-16">
-          {pages.map((page, index) => {
-            const isActive = currentPage === page;
-
-            return (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className="flex-1 flex flex-col items-center justify-center gap-1.5 py-2 bg-transparent border-none cursor-pointer transition-all duration-300"
-              >
-                <span
-                  className={`font-mono text-[10px] tracking-[0.05em] transition-all duration-300 ${
-                    isActive
-                      ? "font-bold text-white"
-                      : "font-medium text-white/40"
-                  }`}
-                >
-                  {navLabels[index]}
-                </span>
-
-                {/* 포인트는 dot 하나로만 (과하지 않게) */}
-                <span
-                  className={`w-1 h-1 rounded-full transition-all duration-300 ${
-                    isActive
-                      ? "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]"
-                      : "bg-transparent"
-                  }`}
-                />
-              </button>
-            );
-          })}
-        </div>
-      </nav>
-
-      {/* Disclaimer */}
-      <p className="absolute bottom-[calc(88px+env(safe-area-inset-bottom))] left-0 right-0 text-center font-mono text-[8px] text-white/25 tracking-wider px-8">
-        본 서비스의 정보는 참고용이며 법적 효력이 없습니다
-      </p>
     </div>
   );
 }
