@@ -1,55 +1,110 @@
+import { useEffect, useRef, useState } from 'react'
+import KakaoMap from './KakaoMap'
+import useUserLocation from '../hooks/useUserLocation'
+
 export default function MapPage({ locationStatus, onLocationAllow, onLocationDeny }) {
-  const showOverlay = locationStatus === 'pending'
+  const {
+    location,
+    permissionStatus,
+    defaultCenter,
+    startWatching,
+    stopWatching,
+    getCurrentPosition
+  } = useUserLocation()
+
+  const watchIdRef = useRef(null)
+  const [showPermissionModal, setShowPermissionModal] = useState(false)
+  const [isMapReady, setIsMapReady] = useState(false)
+
+  // 위치 권한 상태에 따른 모달 표시
+  useEffect(() => {
+    if (locationStatus === 'pending') {
+      setShowPermissionModal(true)
+    } else {
+      setShowPermissionModal(false)
+    }
+  }, [locationStatus])
+
+  // 위치 권한 허용 시 실시간 추적 시작
+  useEffect(() => {
+    if (locationStatus === 'active' && isMapReady) {
+      // 먼저 현재 위치 가져오기
+      getCurrentPosition()
+        .then(() => {
+          // 실시간 추적 시작
+          watchIdRef.current = startWatching()
+        })
+        .catch((err) => {
+          console.error('위치 가져오기 실패:', err)
+        })
+    }
+
+    return () => {
+      if (watchIdRef.current !== null) {
+        stopWatching(watchIdRef.current)
+        watchIdRef.current = null
+      }
+    }
+  }, [locationStatus, isMapReady, getCurrentPosition, startWatching, stopWatching])
+
+  const handleMapReady = () => {
+    setIsMapReady(true)
+  }
+
+  const handleAllowClick = () => {
+    onLocationAllow()
+    setShowPermissionModal(false)
+  }
+
+  const handleDenyClick = () => {
+    onLocationDeny()
+    setShowPermissionModal(false)
+  }
 
   return (
-    <div className="h-full gradient-surface">
-      {/* Map Placeholder */}
-      <div className="h-full flex items-center justify-center flex-col gap-5 pt-14 pb-36">
-        <div className="w-28 h-28 rounded-3xl border border-white/15 flex items-center justify-center relative overflow-hidden">
-          <div
-            className="absolute inset-0 opacity-50"
-            style={{
-              background: 'linear-gradient(135deg, rgba(100, 150, 170, 0.3) 0%, transparent 60%)'
-            }}
-          />
-          <span className="font-sans text-5xl font-extralight text-white/30">X</span>
-        </div>
-        <span className="font-mono text-[10px] font-medium tracking-[0.25em] text-white/30 uppercase">
-          지도 영역
-        </span>
+    <>
+      {/* Kakao Map - 전체 화면 */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 }}>
+        <KakaoMap
+          userLocation={locationStatus === 'active' ? location : null}
+          defaultCenter={defaultCenter}
+          onMapReady={handleMapReady}
+        />
       </div>
 
       {/* Map Legend */}
-      <div className="absolute bottom-40 left-5 right-5">
+      <div style={{ position: 'absolute', bottom: '160px', left: '16px', right: '16px', zIndex: 20 }}>
         <div className="card-slate px-5 py-4 flex justify-between">
           <div className="flex items-center gap-2">
             <div
               className="w-3 h-3 rounded-full"
-              style={{ background: '#b87070', boxShadow: '0 0 8px rgba(184, 112, 112, 0.4)' }}
+              style={{ background: '#8B4D4D', boxShadow: '0 0 8px rgba(139, 77, 77, 0.4)' }}
             />
             <span className="font-sans text-[11px] text-white/55">금지</span>
           </div>
           <div className="flex items-center gap-2">
             <div
               className="w-3 h-3 rounded-full"
-              style={{ background: '#c9a55a', boxShadow: '0 0 8px rgba(201, 165, 90, 0.4)' }}
+              style={{ background: '#9E8B4D', boxShadow: '0 0 8px rgba(158, 139, 77, 0.4)' }}
             />
             <span className="font-sans text-[11px] text-white/55">제한</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full border-2 border-white/35" />
-            <span className="font-sans text-[11px] text-white/55">가능</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-white/20" />
-            <span className="font-sans text-[11px] text-white/55">정보없음</span>
+            <div
+              className="w-3 h-3 rounded-full"
+              style={{ background: '#3B82F6', boxShadow: '0 0 8px rgba(59, 130, 246, 0.4)' }}
+            />
+            <span className="font-sans text-[11px] text-white/55">내 위치</span>
           </div>
         </div>
       </div>
 
-      {/* Location Permission Overlay */}
-      {showOverlay && (
-        <div className="absolute inset-0 bg-black/45 backdrop-blur-md flex flex-col items-center justify-center px-8 gap-6 z-40 animate-fadeUp">
+      {/* Location Permission Modal */}
+      {showPermissionModal && (
+        <div
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 40 }}
+          className="bg-black/45 backdrop-blur-md flex flex-col items-center justify-center px-8 gap-6 animate-fadeUp"
+        >
           <div className="glass-strong p-8 max-w-sm w-full text-center">
             <h2 className="font-sans text-xl font-medium text-white/90 leading-relaxed mb-3">
               위치 정보 접근 권한이
@@ -63,7 +118,7 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
 
             <div className="space-y-3">
               <button
-                onClick={onLocationAllow}
+                onClick={handleAllowClick}
                 className="w-full py-4 font-sans text-sm font-semibold text-white border-none cursor-pointer btn-soft"
                 style={{
                   background: 'linear-gradient(135deg, rgba(70, 130, 140, 0.9) 0%, rgba(50, 100, 115, 0.95) 100%)'
@@ -72,7 +127,7 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
                 위치 접근 허용
               </button>
               <button
-                onClick={onLocationDeny}
+                onClick={handleDenyClick}
                 className="w-full py-3 bg-transparent text-white/40 font-sans text-sm border-none cursor-pointer rounded-xl"
               >
                 나중에
@@ -81,6 +136,6 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }

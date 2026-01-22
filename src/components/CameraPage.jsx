@@ -66,14 +66,12 @@ export default function CameraPage() {
           </>
         ) : (
           <>
-            <div className="w-20 h-20 rounded-2xl border border-white/15 flex items-center justify-center relative overflow-hidden">
-              <div
-                className="absolute inset-0 opacity-40"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(100, 150, 170, 0.3) 0%, transparent 50%)'
-                }}
+            <div className="w-40 h-40 flex items-center justify-center">
+              <img
+                src="/camera1.png"
+                alt="카메라"
+                className="w-full h-full object-contain opacity-70"
               />
-              <span className="font-sans text-3xl font-extralight text-white/30">X</span>
             </div>
             <span className="font-sans text-sm text-white/45">
               {result ? '탭하여 재시도' : '사진을 업로드하세요'}
