@@ -1,4 +1,5 @@
 import { useState } from "react";
+import IntroPage from "./components/IntroPage";
 import MapPage from "./components/MapPage";
 import CheckPage from "./components/CheckPage";
 import RegulationsPage from "./components/RegulationsPage";
@@ -8,9 +9,14 @@ import SwimmingFish from "./components/SwimmingFish";
 import Sidebar from "./components/Sidebar";
 
 export default function App() {
+  const [showIntro, setShowIntro] = useState(true);
   const [currentPage, setCurrentPage] = useState("map");
   const [locationStatus, setLocationStatus] = useState("pending");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const handleStart = () => {
+    setShowIntro(false);
+  };
 
   const handleLocationAllow = () => {
     if (navigator.geolocation) {
@@ -48,6 +54,15 @@ export default function App() {
         return <MapPage {...pageProps} />;
     }
   };
+
+  // 인트로 페이지 표시
+  if (showIntro) {
+    return (
+      <div className="h-dvh overflow-hidden">
+        <IntroPage onStart={handleStart} />
+      </div>
+    );
+  }
 
   return (
     <div className="h-dvh flex flex-col overflow-hidden relative">
