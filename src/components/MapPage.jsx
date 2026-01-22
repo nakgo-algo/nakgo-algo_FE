@@ -5,7 +5,6 @@ import useUserLocation from '../hooks/useUserLocation'
 export default function MapPage({ locationStatus, onLocationAllow, onLocationDeny }) {
   const {
     location,
-    permissionStatus,
     defaultCenter,
     startWatching,
     stopWatching,
@@ -16,7 +15,6 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
   const [showPermissionModal, setShowPermissionModal] = useState(false)
   const [isMapReady, setIsMapReady] = useState(false)
 
-  // 위치 권한 상태에 따른 모달 표시
   useEffect(() => {
     if (locationStatus === 'pending') {
       setShowPermissionModal(true)
@@ -25,13 +23,10 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
     }
   }, [locationStatus])
 
-  // 위치 권한 허용 시 실시간 추적 시작
   useEffect(() => {
     if (locationStatus === 'active' && isMapReady) {
-      // 먼저 현재 위치 가져오기
       getCurrentPosition()
         .then(() => {
-          // 실시간 추적 시작
           watchIdRef.current = startWatching()
         })
         .catch((err) => {
@@ -72,29 +67,29 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
         />
       </div>
 
-      {/* Map Legend */}
-      <div style={{ position: 'absolute', bottom: '160px', left: '16px', right: '16px', zIndex: 20 }}>
-        <div className="card-slate px-5 py-4 flex justify-between">
+      {/* 범례 - 간단한 점 표시 */}
+      <div style={{ position: 'absolute', bottom: '140px', left: '16px', zIndex: 20 }}>
+        <div className="flex flex-col gap-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
           <div className="flex items-center gap-2">
             <div
               className="w-3 h-3 rounded-full"
-              style={{ background: '#8B4D4D', boxShadow: '0 0 8px rgba(139, 77, 77, 0.4)' }}
+              style={{ background: '#CC3333' }}
             />
-            <span className="font-sans text-[11px] text-white/55">금지</span>
+            <span className="font-sans text-[11px] text-white/70">금지</span>
           </div>
           <div className="flex items-center gap-2">
             <div
               className="w-3 h-3 rounded-full"
-              style={{ background: '#9E8B4D', boxShadow: '0 0 8px rgba(158, 139, 77, 0.4)' }}
+              style={{ background: '#E67E22' }}
             />
-            <span className="font-sans text-[11px] text-white/55">제한</span>
+            <span className="font-sans text-[11px] text-white/70">제한</span>
           </div>
           <div className="flex items-center gap-2">
             <div
               className="w-3 h-3 rounded-full"
-              style={{ background: '#3B82F6', boxShadow: '0 0 8px rgba(59, 130, 246, 0.4)' }}
+              style={{ background: '#3B82F6' }}
             />
-            <span className="font-sans text-[11px] text-white/55">내 위치</span>
+            <span className="font-sans text-[11px] text-white/70">내 위치</span>
           </div>
         </div>
       </div>
