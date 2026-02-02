@@ -15,6 +15,7 @@ function FishSilhouette({ size = 50, animationDelay = 0 }) {
         <animate
           attributeName="d"
           dur="1.2s"
+          pls grid ad 마라 
           repeatCount="indefinite"
           begin={`${animationDelay}s`}
           calcMode="spline"
