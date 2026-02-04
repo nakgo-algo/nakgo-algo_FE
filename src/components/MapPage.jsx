@@ -2,6 +2,60 @@ import { useEffect, useRef, useState } from 'react'
 import KakaoMap from './KakaoMap'
 import useUserLocation from '../hooks/useUserLocation'
 
+// 모바일 접속 QR 코드 컴포넌트
+function MobileQRCode() {
+  const [showQR, setShowQR] = useState(false)
+  const networkUrl = 'http://192.168.1.25:3000'
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(networkUrl)}`
+
+  return (
+    <>
+      {/* QR 버튼 */}
+      <button
+        onClick={() => setShowQR(!showQR)}
+        className="w-10 h-10 rounded-xl bg-black/40 backdrop-blur-sm flex items-center justify-center hover:bg-black/60 transition-colors"
+        title="모바일 접속 QR"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" opacity="0.7">
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="3" height="3" />
+          <rect x="18" y="14" width="3" height="3" />
+          <rect x="14" y="18" width="3" height="3" />
+          <rect x="18" y="18" width="3" height="3" />
+        </svg>
+      </button>
+
+      {/* QR 모달 */}
+      {showQR && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+          onClick={() => setShowQR(false)}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 mx-4 max-w-xs w-full text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-gray-800 font-semibold text-lg mb-2">모바일로 접속</h3>
+            <p className="text-gray-500 text-sm mb-4">같은 Wi-Fi에서 QR을 스캔하세요</p>
+            <div className="bg-white p-3 rounded-xl inline-block mb-3">
+              <img src={qrUrl} alt="QR Code" className="w-36 h-36" />
+            </div>
+            <p className="text-gray-400 text-xs font-mono break-all">{networkUrl}</p>
+            <button
+              onClick={() => setShowQR(false)}
+              className="mt-4 px-6 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 transition-colors"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 export default function MapPage({ locationStatus, onLocationAllow, onLocationDeny }) {
   const {
     location,
@@ -65,6 +119,11 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
           defaultCenter={defaultCenter}
           onMapReady={handleMapReady}
         />
+      </div>
+
+      {/* QR 코드 버튼 */}
+      <div style={{ position: 'absolute', bottom: '24px', right: '16px', zIndex: 20 }}>
+        <MobileQRCode />
       </div>
 
       {/* 범례 - 간단한 점 표시 */}
