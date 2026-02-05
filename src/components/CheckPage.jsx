@@ -55,7 +55,7 @@ export default function CheckPage() {
     }
   }
 
-  const handleCheck = async () => {
+  const handleCheck = () => {
     const selectedFish = showCustomInput ? customFish : fish
 
     if (!selectedFish) {
@@ -69,10 +69,8 @@ export default function CheckPage() {
       return
     }
 
-    // 데이터베이스에서 어종 찾기
     let data = fishData[selectedFish]
 
-    // 정확히 일치하지 않으면 부분 일치 검색
     if (!data) {
       const matchedFish = fishList.find(f => f.includes(selectedFish) || selectedFish.includes(f))
       if (matchedFish) {
@@ -81,147 +79,86 @@ export default function CheckPage() {
     }
 
     if (!data) {
-      // 알 수 없는 어종
       setResult({
         status: 'unknown',
         fishName: selectedFish,
         inputLength: lengthNum,
-        message: '해당 어종의 규제 정보를 찾을 수 없습니다. 지역 수산관서에 문의하세요.',
       })
       return
     }
 
-    // 판정
     const fishName = data.name || selectedFish
 
     if (data.warning) {
-      // 생태계교란종
-      setResult({
-        status: 'invasive',
-        fish: { name: fishName, ...data },
-        inputLength: lengthNum,
-      })
+      setResult({ status: 'invasive', fish: { name: fishName, ...data }, inputLength: lengthNum })
     } else if (data.minSize && lengthNum < data.minSize) {
-      // 체장 미달
-      setResult({
-        status: 'prohibited',
-        fish: { name: fishName, ...data },
-        inputLength: lengthNum,
-      })
+      setResult({ status: 'prohibited', fish: { name: fishName, ...data }, inputLength: lengthNum })
     } else if (data.closedSeason) {
-      // 금어기 있음
-      setResult({
-        status: 'restricted',
-        fish: { name: fishName, ...data },
-        inputLength: lengthNum,
-      })
+      setResult({ status: 'restricted', fish: { name: fishName, ...data }, inputLength: lengthNum })
     } else {
-      // 포획 가능
-      setResult({
-        status: 'allowed',
-        fish: { name: fishName, ...data },
-        inputLength: lengthNum,
-      })
+      setResult({ status: 'allowed', fish: { name: fishName, ...data }, inputLength: lengthNum })
+    }
+  }
+
+  const getStatusStyle = (status) => {
+    switch (status) {
+      case 'allowed': return { bg: 'bg-green-500/10', border: 'border-green-500/20', text: 'text-green-400', label: '포획 가능' }
+      case 'prohibited': return { bg: 'bg-red-500/10', border: 'border-red-500/20', text: 'text-red-400', label: '포획 금지' }
+      case 'restricted': return { bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', text: 'text-yellow-400', label: '금어기 주의' }
+      case 'invasive': return { bg: 'bg-orange-500/10', border: 'border-orange-500/20', text: 'text-orange-400', label: '생태계교란종' }
+      default: return { bg: 'bg-slate-500/10', border: 'border-slate-500/20', text: 'text-slate-400', label: '정보 없음' }
     }
   }
 
   return (
-    <div className="h-full gradient-shallow pt-16 pb-8 px-5 overflow-y-auto relative">
-      {/* Background accent */}
-      <div
-        className="absolute top-0 right-0 w-64 h-64 opacity-20 pointer-events-none"
-        style={{
-          background: 'radial-gradient(circle, rgba(80, 160, 180, 0.3) 0%, transparent 70%)',
-        }}
-      />
-
+    <div className="h-full bg-slate-900 pt-16 pb-8 px-5 overflow-y-auto">
       {/* Header */}
-      <div className="relative z-10 mb-8 pt-4">
-        <div className="flex items-end gap-3 mb-2">
-          <h1 className="font-sans text-[28px] font-semibold text-white/90 tracking-tight leading-none">
-            위반 판단
-          </h1>
-          <span className="font-mono text-[10px] text-white/30 tracking-widest uppercase pb-1">
-            Check
-          </span>
-        </div>
-        <p className="font-sans text-[13px] text-white/40 leading-relaxed">
-          어종과 크기를 입력하면 포획 가능 여부를 알려드립니다
-        </p>
+      <div className="mb-6 pt-4">
+        <h1 className="text-2xl font-bold text-white mb-1">위반 판단</h1>
+        <p className="text-sm text-slate-400">어종과 크기로 포획 가능 여부 확인</p>
       </div>
 
       {/* Form */}
-      <div className="relative z-10 space-y-4">
-        {/* Fish Select/Input Card */}
-        <div
-          className="p-5 rounded-2xl backdrop-blur-sm"
-          style={{
-            background: 'linear-gradient(145deg, rgba(70, 120, 130, 0.2) 0%, rgba(50, 90, 100, 0.08) 100%)',
-            border: '1px solid rgba(100, 160, 170, 0.12)',
-          }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <span className="font-sans text-[11px] font-medium text-white/50 tracking-wide">
-              어종
-            </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-teal-400/50" />
-          </div>
-
+      <div className="space-y-4">
+        {/* Fish Select */}
+        <div>
+          <label className="block text-xs text-slate-400 mb-2">어종</label>
           {!showCustomInput ? (
             <select
               value={fish}
               onChange={handleFishChange}
-              className="w-full bg-transparent border-none p-0 font-sans text-[20px] font-light text-white/90 outline-none cursor-pointer appearance-none"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='rgba(255,255,255,0.3)' d='M2 4l4 4 4-4'/%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 0 center',
-              }}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white outline-none focus:border-slate-600"
             >
               <option value="">선택하세요</option>
               <option value="__custom__">직접 입력</option>
-              <option disabled>──────────</option>
               {fishList.map((f) => (
                 <option key={f} value={f}>{f}</option>
               ))}
             </select>
           ) : (
-            <div className="relative">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={customFish}
-                  onChange={(e) => setCustomFish(e.target.value)}
-                  placeholder="어종명 입력 (예: 광어)"
-                  autoFocus
-                  className="flex-1 bg-transparent border-none p-0 font-sans text-[20px] font-light text-white/90 outline-none placeholder:text-white/25"
-                />
-                <button
-                  onClick={() => { setShowCustomInput(false); setCustomFish(''); }}
-                  className="px-3 py-1.5 rounded-lg bg-white/10 text-white/60 text-[12px] hover:bg-white/20 transition-colors"
-                >
-                  취소
-                </button>
-              </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={customFish}
+                onChange={(e) => setCustomFish(e.target.value)}
+                placeholder="어종명 입력"
+                autoFocus
+                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white outline-none focus:border-slate-600 placeholder:text-slate-500"
+              />
+              <button
+                onClick={() => { setShowCustomInput(false); setCustomFish(''); }}
+                className="px-4 py-3 bg-slate-700 text-slate-300 rounded-lg text-sm"
+              >
+                취소
+              </button>
             </div>
           )}
         </div>
 
-        {/* Length Input Card */}
-        <div
-          className="p-5 rounded-2xl backdrop-blur-sm"
-          style={{
-            background: 'linear-gradient(145deg, rgba(60, 100, 120, 0.2) 0%, rgba(40, 80, 100, 0.08) 100%)',
-            border: '1px solid rgba(80, 140, 160, 0.12)',
-          }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <span className="font-sans text-[11px] font-medium text-white/50 tracking-wide">
-              전장 길이
-            </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400/50" />
-          </div>
-          <div className="flex items-baseline gap-3">
+        {/* Length Input */}
+        <div>
+          <label className="block text-xs text-slate-400 mb-2">전장 길이</label>
+          <div className="flex items-center gap-2">
             <input
               type="number"
               value={length}
@@ -229,20 +166,16 @@ export default function CheckPage() {
               placeholder="0"
               min="0"
               step="0.1"
-              className="flex-1 bg-transparent border-none p-0 font-sans text-[48px] font-extralight text-white/90 outline-none placeholder:text-white/15 tracking-tight"
+              className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white text-2xl outline-none focus:border-slate-600 placeholder:text-slate-600"
             />
-            <span className="font-sans text-[15px] font-light text-white/35">cm</span>
+            <span className="text-slate-400 text-lg">cm</span>
           </div>
         </div>
 
         {/* Check Button */}
         <button
           onClick={handleCheck}
-          className="w-full py-4 mt-2 font-sans text-[14px] font-semibold tracking-wide text-white/90 border-none cursor-pointer rounded-2xl transition-all duration-200 active:scale-[0.98]"
-          style={{
-            background: 'linear-gradient(135deg, rgba(65, 125, 140, 0.85) 0%, rgba(45, 100, 115, 0.9) 100%)',
-            boxShadow: '0 4px 20px rgba(0, 60, 80, 0.25)',
-          }}
+          className="w-full py-3.5 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-lg transition-colors"
         >
           판정하기
         </button>
@@ -250,185 +183,60 @@ export default function CheckPage() {
 
       {/* Result */}
       {result && (
-        <div className="relative z-10 mt-8 animate-fadeUp">
+        <div className="mt-6">
           {result.status === 'unknown' ? (
-            // 알 수 없는 어종
-            <div
-              className="p-6 rounded-2xl backdrop-blur-sm relative overflow-hidden"
-              style={{
-                background: 'linear-gradient(145deg, rgba(100, 100, 100, 0.2) 0%, rgba(80, 80, 80, 0.1) 100%)',
-                border: '1px solid rgba(150, 150, 150, 0.15)',
-              }}
-            >
-              <div className="absolute top-0 left-0 w-1 h-full bg-gray-400/50 rounded-l-2xl" />
-              <div className="mb-4">
-                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-gray-500/15 text-gray-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                  정보 없음
-                </span>
-              </div>
-              <h2 className="font-sans text-[22px] font-semibold text-white/90 mb-2">
-                {result.fishName}
-              </h2>
-              <p className="font-sans text-[13px] text-white/50 leading-relaxed mb-4">
-                {result.message}
-              </p>
-              <div className="p-3 rounded-xl bg-white/5">
-                <p className="font-sans text-[12px] text-white/40">
-                  입력 길이: <span className="text-white/70">{result.inputLength}cm</span>
-                </p>
-              </div>
+            <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+              <p className="text-slate-400 text-sm mb-2">정보 없음</p>
+              <h3 className="text-white text-lg mb-1">{result.fishName}</h3>
+              <p className="text-slate-500 text-sm">규제 정보를 찾을 수 없습니다.</p>
+              <p className="text-slate-500 text-xs mt-2">입력 길이: {result.inputLength}cm</p>
             </div>
           ) : (
-            // 일반 결과
-            <div
-              className="p-6 rounded-2xl backdrop-blur-sm relative overflow-hidden"
-              style={{
-                background: result.status === 'allowed'
-                  ? 'linear-gradient(145deg, rgba(60, 130, 120, 0.25) 0%, rgba(40, 100, 90, 0.1) 100%)'
-                  : result.status === 'prohibited'
-                  ? 'linear-gradient(145deg, rgba(140, 70, 70, 0.25) 0%, rgba(110, 50, 50, 0.1) 100%)'
-                  : result.status === 'invasive'
-                  ? 'linear-gradient(145deg, rgba(140, 100, 60, 0.25) 0%, rgba(110, 80, 40, 0.1) 100%)'
-                  : 'linear-gradient(145deg, rgba(150, 120, 60, 0.25) 0%, rgba(120, 95, 40, 0.1) 100%)',
-                border: `1px solid ${
-                  result.status === 'allowed'
-                    ? 'rgba(100, 180, 160, 0.2)'
-                    : result.status === 'prohibited'
-                    ? 'rgba(180, 100, 100, 0.2)'
-                    : result.status === 'invasive'
-                    ? 'rgba(200, 150, 100, 0.2)'
-                    : 'rgba(180, 150, 80, 0.2)'
-                }`,
-              }}
-            >
-              {/* Status indicator line */}
-              <div
-                className="absolute top-0 left-0 w-1 h-full rounded-l-2xl"
-                style={{
-                  background: result.status === 'allowed'
-                    ? 'linear-gradient(180deg, #4ade80, #22c55e)'
-                    : result.status === 'prohibited'
-                    ? 'linear-gradient(180deg, #f87171, #ef4444)'
-                    : result.status === 'invasive'
-                    ? 'linear-gradient(180deg, #fb923c, #f97316)'
-                    : 'linear-gradient(180deg, #fbbf24, #f59e0b)',
-                }}
-              />
+            <div className={`p-4 rounded-lg border ${getStatusStyle(result.status).bg} ${getStatusStyle(result.status).border}`}>
+              {/* Status */}
+              <span className={`text-xs font-medium ${getStatusStyle(result.status).text}`}>
+                {getStatusStyle(result.status).label}
+              </span>
 
-              {/* Status Badge */}
-              <div className="mb-5">
-                <span
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-semibold"
-                  style={{
-                    background: result.status === 'allowed'
-                      ? 'rgba(74, 222, 128, 0.15)'
-                      : result.status === 'prohibited'
-                      ? 'rgba(248, 113, 113, 0.15)'
-                      : result.status === 'invasive'
-                      ? 'rgba(251, 146, 60, 0.15)'
-                      : 'rgba(251, 191, 36, 0.15)',
-                    color: result.status === 'allowed'
-                      ? '#86efac'
-                      : result.status === 'prohibited'
-                      ? '#fca5a5'
-                      : result.status === 'invasive'
-                      ? '#fdba74'
-                      : '#fcd34d',
-                  }}
-                >
-                  <span
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{
-                      background: result.status === 'allowed'
-                        ? '#4ade80'
-                        : result.status === 'prohibited'
-                        ? '#f87171'
-                        : result.status === 'invasive'
-                        ? '#fb923c'
-                        : '#fbbf24',
-                    }}
-                  />
-                  {result.status === 'allowed' && '포획 가능'}
-                  {result.status === 'prohibited' && '포획 금지'}
-                  {result.status === 'restricted' && '금어기 주의'}
-                  {result.status === 'invasive' && '생태계교란종'}
-                </span>
-              </div>
+              {/* Fish name */}
+              <h3 className="text-white text-xl font-semibold mt-2 mb-1">
+                {result.fish.name}
+              </h3>
+              <p className="text-slate-500 text-xs mb-4">{result.fish.nameEn}</p>
 
-              {/* Fish Info */}
-              <div className="mb-6">
-                <h2 className="font-sans text-[26px] font-semibold text-white/90 tracking-tight mb-0.5">
-                  {result.fish.name}
-                </h2>
-                <p className="font-mono text-[10px] text-white/30 tracking-wider">
-                  {result.fish.nameEn}
-                </p>
-              </div>
-
-              {/* Details Grid */}
-              <div className="grid grid-cols-2 gap-4 py-4 border-t border-white/8">
+              {/* Details */}
+              <div className="flex gap-6 text-sm py-3 border-t border-white/10">
                 <div>
-                  <span className="block font-sans text-[10px] text-white/40 mb-1">입력 길이</span>
-                  <span className="font-sans text-[18px] font-light text-white/85">
-                    {result.inputLength}
-                    <span className="text-[12px] text-white/40 ml-1">cm</span>
-                  </span>
+                  <p className="text-slate-500 text-xs">입력 길이</p>
+                  <p className="text-white">{result.inputLength}cm</p>
                 </div>
                 {result.fish.minSize && (
                   <div>
-                    <span className="block font-sans text-[10px] text-white/40 mb-1">최소 체장</span>
-                    <span className="font-sans text-[18px] font-light text-white/85">
-                      {result.fish.minSize}
-                      <span className="text-[12px] text-white/40 ml-1">cm</span>
-                    </span>
-                  </div>
-                )}
-                {result.fish.closedSeason && (
-                  <div className="col-span-2">
-                    <span className="block font-sans text-[10px] text-white/40 mb-1">금어기</span>
-                    <span className="font-sans text-[14px] text-white/85">
-                      {result.fish.closedSeason}
-                    </span>
+                    <p className="text-slate-500 text-xs">최소 체장</p>
+                    <p className="text-white">{result.fish.minSize}cm</p>
                   </div>
                 )}
               </div>
 
-              {/* Warning Messages */}
-              {result.status === 'prohibited' && (
-                <div className="mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/10">
-                  <p className="font-sans text-[12px] text-rose-200/70 leading-relaxed">
-                    금지체장 미달입니다. 포획 및 유통이 금지됩니다. 즉시 방류해 주세요.
-                  </p>
+              {result.fish.closedSeason && (
+                <div className="pt-3 border-t border-white/10">
+                  <p className="text-slate-500 text-xs">금어기</p>
+                  <p className="text-white text-sm">{result.fish.closedSeason}</p>
                 </div>
               )}
-              {result.status === 'restricted' && (
-                <div className="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/10">
-                  <p className="font-sans text-[12px] text-amber-200/70 leading-relaxed">
-                    금어기 기간을 확인하세요. 해당 기간 중 포획이 금지됩니다.
-                  </p>
-                </div>
-              )}
-              {result.status === 'invasive' && (
-                <div className="mt-4 p-3 rounded-xl bg-orange-500/10 border border-orange-500/10">
-                  <p className="font-sans text-[12px] text-orange-200/70 leading-relaxed">
-                    생태계교란종입니다. 포획 후 자연에 방류하지 마세요. 생태계 보호를 위해 폐기를 권장합니다.
-                  </p>
-                </div>
-              )}
-              {result.status === 'allowed' && (
-                <div className="mt-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/10">
-                  <p className="font-sans text-[12px] text-emerald-200/70 leading-relaxed">
-                    포획 및 유통이 가능합니다. 지역별 추가 규정을 확인하세요.
-                  </p>
-                </div>
-              )}
+
+              {/* Message */}
+              <p className={`text-sm mt-4 ${getStatusStyle(result.status).text}`}>
+                {result.status === 'prohibited' && '체장 미달입니다. 즉시 방류하세요.'}
+                {result.status === 'restricted' && '금어기 기간을 확인하세요.'}
+                {result.status === 'invasive' && '생태계교란종입니다. 방류하지 마세요.'}
+                {result.status === 'allowed' && '포획 가능합니다.'}
+              </p>
             </div>
           )}
         </div>
       )}
 
-      {/* Bottom spacing */}
       <div className="h-20" />
     </div>
   )
