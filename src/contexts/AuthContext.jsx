@@ -28,12 +28,9 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  // 로그인 상태 확인 (로컬 스토리지)
+  // 로그인 상태 확인 (새로고침 시 리셋)
   const checkLoginStatus = () => {
-    const savedUser = localStorage.getItem('nakgo_user')
-    if (savedUser) {
-      setUser(JSON.parse(savedUser))
-    }
+    // localStorage 사용 안 함 - 새로고침 시 리셋
     setIsLoading(false)
   }
 
@@ -49,7 +46,6 @@ export function AuthProvider({ children }) {
           provider: 'demo'
         }
         setUser(demoUser)
-        localStorage.setItem('nakgo_user', JSON.stringify(demoUser))
         resolve(demoUser)
         return
       }
@@ -67,7 +63,6 @@ export function AuthProvider({ children }) {
                 provider: 'kakao'
               }
               setUser(kakaoUser)
-              localStorage.setItem('nakgo_user', JSON.stringify(kakaoUser))
               resolve(kakaoUser)
             },
             fail: (error) => {
@@ -93,26 +88,23 @@ export function AuthProvider({ children }) {
       provider: 'demo'
     }
     setUser(demoUser)
-    localStorage.setItem('nakgo_user', JSON.stringify(demoUser))
     return demoUser
   }
 
   // 로그아웃
   const logout = () => {
-    if (window.Kakao && window.Kakao.Auth.getAccessToken()) {
+    if (window.Kakao?.Auth?.getAccessToken()) {
       window.Kakao.Auth.logout(() => {
         console.log('Kakao logout')
       })
     }
     setUser(null)
-    localStorage.removeItem('nakgo_user')
   }
 
   // 프로필 업데이트
   const updateProfile = (updates) => {
     const updatedUser = { ...user, ...updates }
     setUser(updatedUser)
-    localStorage.setItem('nakgo_user', JSON.stringify(updatedUser))
   }
 
   return (

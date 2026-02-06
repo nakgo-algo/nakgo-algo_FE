@@ -70,23 +70,51 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
   const [isMapReady, setIsMapReady] = useState(false)
   const [showPointModal, setShowPointModal] = useState(false)
   const [showPointsList, setShowPointsList] = useState(false)
-  const [myPoints, setMyPoints] = useState(() => {
-    const saved = localStorage.getItem('nakgo_my_points')
-    return saved ? JSON.parse(saved) : []
-  })
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedLocation, setSelectedLocation] = useState(null)
+  const [myPoints, setMyPoints] = useState([])
 
   // 포인트 저장
   const savePoint = (point) => {
     const newPoints = [...myPoints, { ...point, id: Date.now() }]
     setMyPoints(newPoints)
-    localStorage.setItem('nakgo_my_points', JSON.stringify(newPoints))
   }
 
   // 포인트 삭제
   const deletePoint = (id) => {
     const newPoints = myPoints.filter(p => p.id !== id)
     setMyPoints(newPoints)
-    localStorage.setItem('nakgo_my_points', JSON.stringify(newPoints))
+  }
+
+  // 지도 클릭 핸들러
+  const handleMapClick = (latlng) => {
+    if (selectMode) {
+      setSelectedLocation(latlng)
+    }
+  }
+
+  // 선택 모드 시작
+  const startSelectMode = () => {
+    if (!isLoggedIn) {
+      alert('로그인이 필요합니다')
+      onNavigate?.('login')
+      return
+    }
+    setSelectMode(true)
+    setSelectedLocation(null)
+  }
+
+  // 선택 모드 종료
+  const cancelSelectMode = () => {
+    setSelectMode(false)
+    setSelectedLocation(null)
+  }
+
+  // 선택한 위치로 포인트 저장
+  const confirmSelectedLocation = () => {
+    if (selectedLocation) {
+      setShowPointModal(true)
+    }
   }
 
   useEffect(() => {
@@ -138,6 +166,10 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
           userLocation={locationStatus === 'active' ? location : null}
           defaultCenter={defaultCenter}
           onMapReady={handleMapReady}
+          onMapClick={handleMapClick}
+          selectMode={selectMode}
+          selectedLocation={selectedLocation}
+          savedPoints={myPoints}
         />
       </div>
 
@@ -160,19 +192,12 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
         )}
         {/* 포인트 저장 버튼 */}
         <button
-          onClick={() => {
-            if (!isLoggedIn) {
-              alert('로그인이 필요합니다')
-              onNavigate?.('login')
-              return
-            }
-            if (!location) {
-              alert('현재 위치를 확인할 수 없습니다')
-              return
-            }
-            setShowPointModal(true)
-          }}
-          className="w-9 h-9 rounded-lg bg-teal-500/90 hover:bg-teal-600 flex items-center justify-center transition-colors"
+          onClick={startSelectMode}
+          className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
+            selectMode
+              ? 'bg-teal-600 ring-2 ring-teal-400 ring-offset-2 ring-offset-slate-900'
+              : 'bg-teal-500/90 hover:bg-teal-600'
+          }`}
           title="포인트 저장"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
@@ -195,22 +220,57 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
       </div>
 
       {/* 범례 */}
-      <div style={{ position: 'absolute', bottom: '24px', left: '16px', zIndex: 20 }}>
-        <div className="flex items-center gap-4 text-[11px] text-white drop-shadow-md">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-red-500" />
-            금지
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-orange-500" />
-            제한
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-blue-500" />
-            내 위치
-          </span>
+      {!selectMode && (
+        <div style={{ position: 'absolute', bottom: '24px', left: '16px', zIndex: 20 }}>
+          <div className="flex items-center gap-4 text-[11px] text-white drop-shadow-md">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-red-500" />
+              금지
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-orange-500" />
+              제한
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              내 위치
+            </span>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* 위치 선택 모드 UI */}
+      {selectMode && (
+        <>
+          {/* 상단 안내 */}
+          <div style={{ position: 'absolute', top: '70px', left: '16px', right: '16px', zIndex: 30 }}>
+            <div className="bg-teal-600 text-white rounded-lg px-4 py-3 shadow-lg">
+              <p className="text-sm font-medium">
+                {selectedLocation ? '이 위치에 포인트를 저장할까요?' : '지도를 탭하여 위치를 선택하세요'}
+              </p>
+            </div>
+          </div>
+
+          {/* 하단 버튼 */}
+          <div style={{ position: 'absolute', bottom: '24px', left: '16px', right: '16px', zIndex: 30 }}>
+            <div className="flex gap-2">
+              <button
+                onClick={cancelSelectMode}
+                className="flex-1 py-3 bg-slate-700 text-white rounded-lg text-sm font-medium"
+              >
+                취소
+              </button>
+              <button
+                onClick={confirmSelectedLocation}
+                disabled={!selectedLocation}
+                className="flex-1 py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                이 위치에 저장
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Location Permission Modal */}
       {showPermissionModal && (
@@ -247,12 +307,19 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
       {/* 포인트 저장 모달 */}
       {showPointModal && (
         <SavePointModal
-          location={location}
+          location={selectMode ? selectedLocation : location}
           onSave={(point) => {
             savePoint(point)
             setShowPointModal(false)
+            setSelectMode(false)
+            setSelectedLocation(null)
           }}
-          onClose={() => setShowPointModal(false)}
+          onClose={() => {
+            setShowPointModal(false)
+            if (selectMode) {
+              // 선택 모드에서는 모달만 닫고 선택 모드 유지
+            }
+          }}
         />
       )}
 

@@ -15,8 +15,13 @@ export default function ProfilePage({ onNavigate }) {
   }
 
   const handleLogout = () => {
+    console.log('handleLogout called')
+    console.log('logout function:', logout)
     logout()
+    console.log('logout done')
     setShowLogoutConfirm(false)
+    console.log('navigating to map')
+    onNavigate?.('map') // 로그아웃 후 지도 페이지로 이동
   }
 
   // 메뉴 아이템들
