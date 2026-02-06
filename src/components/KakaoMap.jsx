@@ -139,62 +139,23 @@ export default function KakaoMap({ userLocation, defaultCenter, onMapReady }) {
     closeInfoOverlay()
 
     const isProhibited = zone.type === 'prohibited'
-    const bgColor = isProhibited ? '#CC3333' : '#E67E22'
-    const typeText = isProhibited ? '🚫 금지구역' : '⚠️ 제한구역'
-    const restrictionText = (zone.restriction || '낚시 금지').replace(/\n/g, '<br>')
+    const text = isProhibited
+      ? '낚시 금지구역'
+      : `낚시 제한구역 [${zone.restriction || '제한'}]`
 
     const content = document.createElement('div')
     content.innerHTML = `
-      <div style="
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-        min-width: 220px;
-        max-width: 320px;
-        overflow: hidden;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      ">
-        <div style="
-          background: ${bgColor};
-          color: white;
-          padding: 10px 14px;
-          font-size: 12px;
-          font-weight: 600;
-        ">${typeText}</div>
-        <div style="padding: 12px 14px;">
-          <div style="
-            font-size: 15px;
-            font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 6px;
-          ">${zone.name}</div>
-          <div style="
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 4px;
-          ">📍 ${zone.region || ''}</div>
-          <div style="
-            font-size: 11px;
-            color: #333;
-            line-height: 1.5;
-            background: #f5f5f5;
-            padding: 10px;
-            border-radius: 6px;
-            margin-top: 8px;
-            white-space: pre-line;
-          ">${restrictionText}</div>
-        </div>
-        <button id="info-close-btn" style="
-          width: 100%;
-          padding: 10px;
-          border: none;
-          border-top: 1px solid #eee;
-          background: #fafafa;
-          color: #666;
-          font-size: 12px;
-          cursor: pointer;
-        ">닫기</button>
-      </div>
+      <div id="info-close-btn" style="
+        background: rgba(0,0,0,0.75);
+        color: white;
+        padding: 8px 14px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        white-space: nowrap;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      ">${text}</div>
     `
 
     const overlay = new window.kakao.maps.CustomOverlay({
