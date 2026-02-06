@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import KakaoMap from './KakaoMap'
 import useUserLocation from '../hooks/useUserLocation'
+import { useAuth } from '../contexts/AuthContext'
 
 // 모바일 접속 QR 코드 컴포넌트
 function MobileQRCode() {
@@ -54,7 +55,8 @@ function MobileQRCode() {
   )
 }
 
-export default function MapPage({ locationStatus, onLocationAllow, onLocationDeny }) {
+export default function MapPage({ locationStatus, onLocationAllow, onLocationDeny, onNavigate }) {
+  const { isLoggedIn, user } = useAuth()
   const {
     location,
     defaultCenter,
@@ -66,6 +68,26 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
   const watchIdRef = useRef(null)
   const [showPermissionModal, setShowPermissionModal] = useState(false)
   const [isMapReady, setIsMapReady] = useState(false)
+  const [showPointModal, setShowPointModal] = useState(false)
+  const [showPointsList, setShowPointsList] = useState(false)
+  const [myPoints, setMyPoints] = useState(() => {
+    const saved = localStorage.getItem('nakgo_my_points')
+    return saved ? JSON.parse(saved) : []
+  })
+
+  // 포인트 저장
+  const savePoint = (point) => {
+    const newPoints = [...myPoints, { ...point, id: Date.now() }]
+    setMyPoints(newPoints)
+    localStorage.setItem('nakgo_my_points', JSON.stringify(newPoints))
+  }
+
+  // 포인트 삭제
+  const deletePoint = (id) => {
+    const newPoints = myPoints.filter(p => p.id !== id)
+    setMyPoints(newPoints)
+    localStorage.setItem('nakgo_my_points', JSON.stringify(newPoints))
+  }
 
   useEffect(() => {
     if (locationStatus === 'pending') {
@@ -119,8 +141,56 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
         />
       </div>
 
-      {/* QR 코드 버튼 */}
-      <div style={{ position: 'absolute', bottom: '24px', right: '16px', zIndex: 20 }}>
+      {/* 우측 하단 버튼들 */}
+      <div style={{ position: 'absolute', bottom: '24px', right: '16px', zIndex: 20 }} className="flex flex-col gap-2">
+        {/* 내 포인트 목록 버튼 */}
+        {isLoggedIn && myPoints.length > 0 && (
+          <button
+            onClick={() => setShowPointsList(true)}
+            className="w-9 h-9 rounded-lg bg-blue-500/90 hover:bg-blue-600 flex items-center justify-center transition-colors relative"
+            title="내 포인트"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-white text-blue-600 text-[10px] font-bold rounded-full flex items-center justify-center">
+              {myPoints.length}
+            </span>
+          </button>
+        )}
+        {/* 포인트 저장 버튼 */}
+        <button
+          onClick={() => {
+            if (!isLoggedIn) {
+              alert('로그인이 필요합니다')
+              onNavigate?.('login')
+              return
+            }
+            if (!location) {
+              alert('현재 위치를 확인할 수 없습니다')
+              return
+            }
+            setShowPointModal(true)
+          }}
+          className="w-9 h-9 rounded-lg bg-teal-500/90 hover:bg-teal-600 flex items-center justify-center transition-colors"
+          title="포인트 저장"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m-2-2h4" />
+          </svg>
+        </button>
+        {/* 오류 제보 버튼 */}
+        <button
+          onClick={() => onNavigate?.('report')}
+          className="w-9 h-9 rounded-lg bg-orange-500/90 hover:bg-orange-600 flex items-center justify-center transition-colors"
+          title="오류 제보"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </button>
+        {/* QR 코드 버튼 */}
         <MobileQRCode />
       </div>
 
@@ -173,6 +243,184 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
           </div>
         </div>
       )}
+
+      {/* 포인트 저장 모달 */}
+      {showPointModal && (
+        <SavePointModal
+          location={location}
+          onSave={(point) => {
+            savePoint(point)
+            setShowPointModal(false)
+          }}
+          onClose={() => setShowPointModal(false)}
+        />
+      )}
+
+      {/* 내 포인트 목록 모달 */}
+      {showPointsList && (
+        <PointsListModal
+          points={myPoints}
+          onDelete={deletePoint}
+          onClose={() => setShowPointsList(false)}
+        />
+      )}
     </>
+  )
+}
+
+// 포인트 저장 모달
+function SavePointModal({ location, onSave, onClose }) {
+  const [name, setName] = useState('')
+  const [memo, setMemo] = useState('')
+
+  const handleSave = () => {
+    if (!name.trim()) {
+      alert('포인트 이름을 입력해주세요')
+      return
+    }
+    onSave({
+      name: name.trim(),
+      memo: memo.trim(),
+      lat: location.lat,
+      lng: location.lng,
+      createdAt: new Date().toLocaleDateString('ko-KR'),
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-6">
+      <div className="bg-slate-800 rounded-xl w-full max-w-sm overflow-hidden">
+        <div className="p-5">
+          <h3 className="text-lg font-semibold text-white mb-4">포인트 저장</h3>
+
+          {/* 위치 정보 */}
+          <div className="bg-slate-700/50 rounded-lg p-3 mb-4">
+            <p className="text-xs text-slate-400 mb-1">현재 위치</p>
+            <p className="text-sm text-white font-mono">
+              {location?.lat?.toFixed(6)}, {location?.lng?.toFixed(6)}
+            </p>
+          </div>
+
+          {/* 이름 입력 */}
+          <div className="mb-3">
+            <label className="block text-xs text-slate-400 mb-1.5">포인트 이름</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="예: 우럭 잘 나오는 곳"
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-slate-500 outline-none focus:border-slate-500"
+              autoFocus
+            />
+          </div>
+
+          {/* 메모 입력 */}
+          <div className="mb-4">
+            <label className="block text-xs text-slate-400 mb-1.5">메모 (선택)</label>
+            <textarea
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              placeholder="참고할 내용을 적어두세요"
+              rows={2}
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-slate-500 outline-none focus:border-slate-500 resize-none"
+            />
+          </div>
+
+          {/* 버튼 */}
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 bg-slate-700 text-slate-300 rounded-lg text-sm"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleSave}
+              className="flex-1 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              저장
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// 포인트 목록 모달
+function PointsListModal({ points, onDelete, onClose }) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
+      <div className="bg-slate-800 w-full max-w-lg rounded-t-2xl max-h-[70vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-slate-700">
+          <h3 className="text-lg font-semibold text-white">내 포인트</h3>
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-white">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* List */}
+        <div className="flex-1 overflow-y-auto">
+          {points.length === 0 ? (
+            <div className="flex items-center justify-center h-32 text-slate-500 text-sm">
+              저장된 포인트가 없습니다
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-700/50">
+              {points.map((point) => (
+                <div key={point.id} className="p-4 flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-teal-600/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-white font-medium truncate">{point.name}</h4>
+                    {point.memo && (
+                      <p className="text-slate-400 text-sm truncate">{point.memo}</p>
+                    )}
+                    <p className="text-slate-600 text-xs mt-1">
+                      {point.lat?.toFixed(4)}, {point.lng?.toFixed(4)} · {point.createdAt}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (confirm('이 포인트를 삭제할까요?')) {
+                        onDelete(point.id)
+                      }
+                    }}
+                    className="p-2 text-slate-500 hover:text-red-400 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-slate-700">
+          <p className="text-center text-xs text-slate-500">
+            포인트를 탭하면 해당 위치로 이동합니다 (준비중)
+          </p>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes slide-up {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
+      `}</style>
+    </div>
   )
 }

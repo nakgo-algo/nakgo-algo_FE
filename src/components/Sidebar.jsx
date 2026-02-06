@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 
-const pages = ['map', 'check', 'regulations', 'fines', 'camera']
+const pages = ['map', 'check', 'regulations', 'fines', 'camera', 'community', 'report']
 
 const navLabels = [
   '위치 보기',
@@ -8,9 +9,12 @@ const navLabels = [
   '규정 확인',
   '벌금 안내',
   'AI 분석',
+  '자유게시판',
+  '오류 제보',
 ]
 
 export default function Sidebar({ isOpen, onClose, currentPage, onNavigate }) {
+  const { user, isLoggedIn } = useAuth()
   const sidebarRef = useRef(null)
   const startXRef = useRef(0)
   const currentXRef = useRef(0)
@@ -79,20 +83,71 @@ export default function Sidebar({ isOpen, onClose, currentPage, onNavigate }) {
           boxShadow: isOpen ? '4px 0 24px rgba(0, 0, 0, 0.3)' : 'none',
         }}
       >
-        {/* Header */}
-        <div className="pt-[calc(env(safe-area-inset-top)+20px)] px-6 pb-6 border-b border-white/10">
+        {/* User Profile Section */}
+        <div className="pt-[calc(env(safe-area-inset-top)+20px)] px-6 pb-5 border-b border-white/10">
+          {isLoggedIn ? (
+            <button
+              onClick={() => handleNavClick('profile')}
+              className="flex items-center gap-3 w-full text-left"
+            >
+              <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden">
+                {user?.profileImage ? (
+                  <img
+                    src={user.profileImage}
+                    alt="프로필"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <svg className="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                  </svg>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium text-sm truncate">
+                  {user?.nickname}
+                </p>
+                <p className="text-slate-500 text-xs">프로필 보기</p>
+              </div>
+              <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              onClick={() => handleNavClick('login')}
+              className="flex items-center gap-3 w-full text-left"
+            >
+              <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
+                <svg className="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-white font-medium text-sm">로그인</p>
+                <p className="text-slate-500 text-xs">로그인하고 더 많은 기능 사용</p>
+              </div>
+              <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* App Title */}
+        <div className="px-6 py-4 border-b border-white/5">
           <div className="flex flex-col leading-none">
-            <span className="font-sans text-[22px] font-semibold tracking-[0.06em] text-white/90">
+            <span className="font-sans text-[20px] font-semibold tracking-[0.06em] text-white/90">
               낚고
             </span>
-            <span className="font-sans text-[22px] font-light tracking-[0.1em] text-white/50">
+            <span className="font-sans text-[20px] font-light tracking-[0.1em] text-white/50">
               알고
             </span>
           </div>
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex flex-col py-4">
+        <nav className="flex flex-col py-2">
           {pages.map((page, index) => {
             const isActive = currentPage === page
 
@@ -100,7 +155,7 @@ export default function Sidebar({ isOpen, onClose, currentPage, onNavigate }) {
               <button
                 key={page}
                 onClick={() => handleNavClick(page)}
-                className={`flex items-center gap-4 px-6 py-4 bg-transparent border-none cursor-pointer text-left transition-all duration-200 ${
+                className={`flex items-center gap-4 px-6 py-3.5 bg-transparent border-none cursor-pointer text-left transition-all duration-200 ${
                   isActive
                     ? 'bg-white/10'
                     : 'hover:bg-white/5 active:bg-white/10'
@@ -116,7 +171,7 @@ export default function Sidebar({ isOpen, onClose, currentPage, onNavigate }) {
                 />
 
                 <span
-                  className={`font-sans text-[15px] tracking-wide transition-all duration-200 ${
+                  className={`font-sans text-[14px] tracking-wide transition-all duration-200 ${
                     isActive
                       ? 'font-semibold text-white'
                       : 'font-normal text-white/60'
