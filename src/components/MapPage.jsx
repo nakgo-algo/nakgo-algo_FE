@@ -146,26 +146,26 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
       {showPermissionModal && (
         <div
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 40 }}
-          className="bg-black/50 flex flex-col items-center justify-center px-6"
+          className="bg-black/40 flex flex-col items-center justify-center px-6"
         >
-          <div className="bg-slate-800 rounded-xl p-6 max-w-sm w-full">
-            <h2 className="text-lg font-semibold text-white mb-2">
+          <div className="bg-white rounded-xl p-6 max-w-sm w-full shadow-xl">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">
               위치 접근 권한
             </h2>
-            <p className="text-sm text-slate-400 mb-6">
+            <p className="text-sm text-gray-500 mb-6">
               현재 위치의 낚시 가능 여부를 확인하려면 위치 접근을 허용해 주세요.
             </p>
 
             <div className="space-y-2">
               <button
                 onClick={handleAllowClick}
-                className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium rounded-lg transition-colors"
+                className="w-full py-3 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-colors"
               >
                 허용
               </button>
               <button
                 onClick={handleDenyClick}
-                className="w-full py-3 text-slate-400 text-sm hover:text-slate-300 transition-colors"
+                className="w-full py-3 text-gray-400 text-sm hover:text-gray-600 transition-colors"
               >
                 나중에
               </button>
