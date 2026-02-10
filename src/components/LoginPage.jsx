@@ -61,7 +61,7 @@ export default function LoginPage({ onLoginSuccess }) {
       </div>
 
       {/* Login Buttons */}
-      <div className="px-6 pb-6 space-y-3">
+      <div className="px-20 pb-6 space-y-3">
         <button
           onClick={handleKakaoLogin}
           disabled={isLoading}
