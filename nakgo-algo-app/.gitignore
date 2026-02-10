@@ -7,3 +7,7 @@
 # Build output
 dist
 node_modules
+
+# OS / IDE
+.DS_Store
+.vite
