@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { fishingZones, zoneStyles } from '../data/fishingZones'
+import { fishingZones as staticFishingZones, zoneStyles } from '../data/fishingZones'
 
 const KAKAO_APP_KEY = 'b9b5e7099ba2f552e538754158f6bac2'
 
-export default function KakaoMap({ userLocation, defaultCenter, onMapReady, onMapClick, selectMode, selectedLocation, savedPoints = [] }) {
+export default function KakaoMap({ userLocation, defaultCenter, onMapReady, onMapClick, selectMode, selectedLocation, savedPoints = [], zones }) {
+  const fishingZones = zones || staticFishingZones
+  const fishingZonesRef = useRef(fishingZones)
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const userMarkerRef = useRef(null)
@@ -18,11 +20,22 @@ export default function KakaoMap({ userLocation, defaultCenter, onMapReady, onMa
   const [isMapLoaded, setIsMapLoaded] = useState(false)
   const [loadError, setLoadError] = useState(null)
 
-  // 최신 콜백 유지
+  // 최신 콜백/데이터 유지
   useEffect(() => {
     onMapClickRef.current = onMapClick
     selectModeRef.current = selectMode
   }, [onMapClick, selectMode])
+
+  // zones 데이터 변경 시 기존 구역 초기화 후 다시 로드
+  useEffect(() => {
+    fishingZonesRef.current = fishingZones
+    if (isMapLoaded && mapRef.current) {
+      overlaysRef.current.forEach((o) => o.setMap(null))
+      overlaysRef.current = []
+      renderedIdsRef.current.clear()
+      loadVisibleZones(mapRef.current)
+    }
+  }, [zones])
 
   useEffect(() => {
     if (window.kakao && window.kakao.maps) {
@@ -121,7 +134,7 @@ export default function KakaoMap({ userLocation, defaultCenter, onMapReady, onMa
     const maxLng = ne.getLng()
 
     // 뷰포트 내 구역 필터링
-    const visibleZones = fishingZones.filter((zone) => {
+    const visibleZones = fishingZonesRef.current.filter((zone) => {
       if (renderedIdsRef.current.has(zone.id)) return false
 
       // 좌표 중심점으로 판단

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import KakaoMap from './KakaoMap'
 import useUserLocation from '../hooks/useUserLocation'
 import { useAuth } from '../contexts/AuthContext'
+import api from '../api'
 
 // 모바일 접속 QR 코드 컴포넌트
 function MobileQRCode() {
@@ -73,17 +74,57 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
   const [selectMode, setSelectMode] = useState(false)
   const [selectedLocation, setSelectedLocation] = useState(null)
   const [myPoints, setMyPoints] = useState([])
+  const [zones, setZones] = useState(null)
+
+  // 포인트 목록 불러오기
+  useEffect(() => {
+    if (isLoggedIn) {
+      api.get('/points')
+        .then(setMyPoints)
+        .catch(() => {})
+    }
+  }, [isLoggedIn])
+
+  // 구역 데이터 불러오기
+  useEffect(() => {
+    api.get('/zones')
+      .then(data => {
+        const transformed = data.map(z => ({
+          id: z.id,
+          name: z.name,
+          type: z.type,
+          coordinates: z.coordinates.map(c => ({ lat: c[0], lng: c[1] })),
+          description: z.description,
+          period: z.period,
+        }))
+        setZones(transformed)
+      })
+      .catch(() => {})
+  }, [])
 
   // 포인트 저장
-  const savePoint = (point) => {
-    const newPoints = [...myPoints, { ...point, id: Date.now() }]
-    setMyPoints(newPoints)
+  const savePoint = async (point) => {
+    try {
+      const saved = await api.post('/points', {
+        name: point.name,
+        lat: point.lat,
+        lng: point.lng,
+        memo: point.memo || null,
+      })
+      setMyPoints(prev => [...prev, saved])
+    } catch {
+      alert('포인트 저장에 실패했습니다')
+    }
   }
 
   // 포인트 삭제
-  const deletePoint = (id) => {
-    const newPoints = myPoints.filter(p => p.id !== id)
-    setMyPoints(newPoints)
+  const deletePoint = async (id) => {
+    try {
+      await api.delete(`/points/${id}`)
+      setMyPoints(prev => prev.filter(p => p.id !== id))
+    } catch {
+      alert('포인트 삭제에 실패했습니다')
+    }
   }
 
   // 지도 클릭 핸들러
@@ -170,6 +211,7 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
           selectMode={selectMode}
           selectedLocation={selectedLocation}
           savedPoints={myPoints}
+          zones={zones}
         />
       </div>
 
@@ -316,9 +358,6 @@ export default function MapPage({ locationStatus, onLocationAllow, onLocationDen
           }}
           onClose={() => {
             setShowPointModal(false)
-            if (selectMode) {
-              // 선택 모드에서는 모달만 닫고 선택 모드 유지
-            }
           }}
         />
       )}
@@ -350,7 +389,6 @@ function SavePointModal({ location, onSave, onClose }) {
       memo: memo.trim(),
       lat: location.lat,
       lng: location.lng,
-      createdAt: new Date().toLocaleDateString('ko-KR'),
     })
   }
 
@@ -450,7 +488,7 @@ function PointsListModal({ points, onDelete, onClose }) {
                       <p className="text-slate-400 text-sm truncate">{point.memo}</p>
                     )}
                     <p className="text-slate-600 text-xs mt-1">
-                      {point.lat?.toFixed(4)}, {point.lng?.toFixed(4)} · {point.createdAt}
+                      {point.lat?.toFixed(4)}, {point.lng?.toFixed(4)}
                     </p>
                   </div>
                   <button

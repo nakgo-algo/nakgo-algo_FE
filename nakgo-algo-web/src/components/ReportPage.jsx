@@ -1,39 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-
-// 샘플 제보 데이터
-const sampleReports = [
-  {
-    id: 1,
-    type: 'missing',
-    title: '울산 매암동 금지구역 누락',
-    location: '울산 남구 매암동 472-6',
-    description: '이 지역은 실제로 낚시 금지구역인데 지도에 표시되어 있지 않습니다.',
-    status: 'pending',
-    createdAt: '2026.02.05',
-    author: '바다사랑',
-  },
-  {
-    id: 2,
-    type: 'wrong',
-    title: '부산 기장 해제된 구역',
-    location: '부산 기장군 일광면',
-    description: '작년에 금지구역에서 해제되었는데 아직 빨간색으로 표시됩니다.',
-    status: 'reviewing',
-    createdAt: '2026.02.03',
-    author: '민물킹',
-  },
-  {
-    id: 3,
-    type: 'boundary',
-    title: '경계 오류 - 범위가 너무 넓음',
-    location: '인천 옹진군',
-    description: '금지구역 경계가 실제보다 넓게 표시되어 있습니다.',
-    status: 'resolved',
-    createdAt: '2026.01.28',
-    author: '낚시초보',
-  },
-]
+import api from '../api'
 
 const reportTypes = [
   { value: 'missing', label: '누락된 금지구역', desc: '실제 금지구역인데 지도에 없음' },
@@ -44,20 +11,32 @@ const reportTypes = [
 
 const statusLabels = {
   pending: { label: '검토 대기', color: 'text-slate-400 bg-slate-400/10' },
-  reviewing: { label: '검토 중', color: 'text-yellow-400 bg-yellow-400/10' },
-  resolved: { label: '반영 완료', color: 'text-green-400 bg-green-400/10' },
+  in_progress: { label: '검토 중', color: 'text-yellow-400 bg-yellow-400/10' },
+  completed: { label: '반영 완료', color: 'text-green-400 bg-green-400/10' },
   rejected: { label: '반려', color: 'text-red-400 bg-red-400/10' },
 }
 
 export default function ReportPage({ onNavigate }) {
   const { isLoggedIn } = useAuth()
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [reports] = useState(sampleReports)
+  const [reports, setReports] = useState([])
+  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
 
-  const filteredReports = filter === 'all'
-    ? reports
-    : reports.filter(r => r.status === filter)
+  const fetchReports = () => {
+    setLoading(true)
+    const params = filter !== 'all' ? `?status=${filter}` : ''
+    api.get(`/reports${params}`)
+      .then(setReports)
+      .catch(() => setReports([]))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    if (isLoggedIn) fetchReports()
+  }, [isLoggedIn, filter])
+
+  const filteredReports = reports
 
   if (!isLoggedIn) {
     return (
@@ -94,8 +73,8 @@ export default function ReportPage({ onNavigate }) {
         {[
           { value: 'all', label: '전체' },
           { value: 'pending', label: '대기' },
-          { value: 'reviewing', label: '검토중' },
-          { value: 'resolved', label: '완료' },
+          { value: 'in_progress', label: '검토중' },
+          { value: 'completed', label: '완료' },
         ].map((tab) => (
           <button
             key={tab.value}
@@ -113,7 +92,11 @@ export default function ReportPage({ onNavigate }) {
 
       {/* Report List */}
       <div className="flex-1 overflow-y-auto">
-        {filteredReports.length === 0 ? (
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : filteredReports.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-slate-500">
             <svg className="w-10 h-10 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -126,8 +109,8 @@ export default function ReportPage({ onNavigate }) {
               <div key={report.id} className="px-5 py-4">
                 {/* Status & Type */}
                 <div className="flex items-center gap-2 mb-2">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${statusLabels[report.status].color}`}>
-                    {statusLabels[report.status].label}
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${(statusLabels[report.status] || statusLabels.pending).color}`}>
+                    {(statusLabels[report.status] || statusLabels.pending).label}
                   </span>
                   <span className="text-[10px] text-slate-600">
                     {reportTypes.find(t => t.value === report.type)?.label}
@@ -174,13 +157,19 @@ export default function ReportPage({ onNavigate }) {
 
       {/* Create Report Modal */}
       {showCreateModal && (
-        <CreateReportModal onClose={() => setShowCreateModal(false)} />
+        <CreateReportModal
+          onClose={() => setShowCreateModal(false)}
+          onCreated={() => {
+            setShowCreateModal(false)
+            fetchReports()
+          }}
+        />
       )}
     </div>
   )
 }
 
-function CreateReportModal({ onClose, initialLocation }) {
+function CreateReportModal({ onClose, onCreated, initialLocation }) {
   const [type, setType] = useState('')
   const [title, setTitle] = useState('')
   const [location, setLocation] = useState(initialLocation || '')
@@ -194,11 +183,19 @@ function CreateReportModal({ onClose, initialLocation }) {
     }
 
     setIsSubmitting(true)
-    // 실제로는 API 호출
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      await api.post('/reports', {
+        type,
+        title: title.trim(),
+        location: location.trim(),
+        description: description.trim(),
+      })
+      alert('제보해주셔서 감사합니다! 검토 후 반영하겠습니다.')
+      onCreated()
+    } catch {
+      alert('제보 등록에 실패했습니다')
+    }
     setIsSubmitting(false)
-    alert('제보해주셔서 감사합니다! 검토 후 반영하겠습니다.')
-    onClose()
   }
 
   return (
@@ -329,5 +326,4 @@ function CreateReportModal({ onClose, initialLocation }) {
   )
 }
 
-// 외부에서 사용할 수 있도록 export
 export { CreateReportModal }

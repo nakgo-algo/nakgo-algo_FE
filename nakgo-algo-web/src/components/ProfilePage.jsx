@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import api from '../api'
 
 export default function ProfilePage({ onNavigate }) {
   const { user, logout, updateProfile } = useAuth()
@@ -7,8 +8,17 @@ export default function ProfilePage({ onNavigate }) {
   const [nickname, setNickname] = useState(user?.nickname || '')
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [showLoginRequired, setShowLoginRequired] = useState(false)
+  const [pointCount, setPointCount] = useState(0)
+  const [reportCount, setReportCount] = useState(0)
 
   const isGuest = user?.provider !== 'kakao'
+
+  useEffect(() => {
+    if (!isGuest && api.getToken()) {
+      api.get('/points').then(data => setPointCount(data.length)).catch(() => {})
+      api.get('/reports').then(data => setReportCount(data.length)).catch(() => {})
+    }
+  }, [isGuest])
 
   const handleSaveNickname = () => {
     if (nickname.trim()) {
@@ -39,7 +49,7 @@ export default function ProfilePage({ onNavigate }) {
       label: '나의 포인트',
       desc: '저장한 낚시 장소',
       page: 'myPoints',
-      count: 0,
+      count: pointCount,
     },
     {
       icon: (
@@ -61,7 +71,7 @@ export default function ProfilePage({ onNavigate }) {
       label: '오류 제보 내역',
       desc: '내가 신고한 오류',
       page: 'reports',
-      count: 0,
+      count: reportCount,
     },
     {
       icon: (
