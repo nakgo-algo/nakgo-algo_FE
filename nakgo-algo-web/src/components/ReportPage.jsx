@@ -85,7 +85,7 @@ export default function ReportPage({ onNavigate }) {
     <div className="h-full bg-slate-900 flex flex-col">
       {/* Header */}
       <div className="pt-16 px-5 pb-4 border-b border-slate-800">
-        <h1 className="text-xl font-semibold text-white mb-1">오류 제보</h1>
+        <h1 className="text-2xl font-bold text-white mb-1">오류 제보</h1>
         <p className="text-sm text-slate-400">잘못된 정보를 신고해주세요</p>
       </div>
 
@@ -197,7 +197,7 @@ function CreateReportModal({ onClose, initialLocation }) {
     // 실제로는 API 호출
     await new Promise(resolve => setTimeout(resolve, 1000))
     setIsSubmitting(false)
-    alert('제보가 접수되었습니다. 검토 후 반영됩니다.')
+    alert('제보해주셔서 감사합니다! 검토 후 반영하겠습니다.')
     onClose()
   }
 

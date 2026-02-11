@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import api from '../api'
 
 const AuthContext = createContext(null)
 
-// 카카오 SDK 초기화
 const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JS_KEY || ''
 
 export function AuthProvider({ children }) {
@@ -17,94 +17,94 @@ export function AuthProvider({ children }) {
     script.onload = () => {
       if (window.Kakao && !window.Kakao.isInitialized() && KAKAO_JS_KEY) {
         window.Kakao.init(KAKAO_JS_KEY)
-        console.log('Kakao SDK initialized')
       }
       checkLoginStatus()
     }
+    script.onerror = () => checkLoginStatus()
     document.head.appendChild(script)
-
-    return () => {
-      document.head.removeChild(script)
-    }
+    return () => document.head.removeChild(script)
   }, [])
 
-  // 로그인 상태 확인 (새로고침 시 리셋)
-  const checkLoginStatus = () => {
-    // localStorage 사용 안 함 - 새로고침 시 리셋
+  // 저장된 토큰으로 로그인 상태 복원
+  const checkLoginStatus = async () => {
+    const token = api.getToken()
+    if (!token) {
+      setIsLoading(false)
+      return
+    }
+    try {
+      const data = await api.get('/auth/verify')
+      setUser({ ...data.user, provider: 'kakao' })
+    } catch {
+      api.clearToken()
+    }
     setIsLoading(false)
   }
 
-  // 카카오 로그인
+  // 카카오 로그인 → 백엔드 JWT 발급
   const loginWithKakao = () => {
     return new Promise((resolve, reject) => {
       if (!window.Kakao) {
-        // 카카오 SDK 없으면 데모 로그인
-        const demoUser = {
-          id: 'demo_' + Date.now(),
-          nickname: '낚시인' + Math.floor(Math.random() * 1000),
-          profileImage: null,
-          provider: 'demo'
-        }
-        setUser(demoUser)
-        resolve(demoUser)
+        loginDemo()
+        resolve(user)
         return
       }
 
       window.Kakao.Auth.login({
-        success: (authObj) => {
-          // 사용자 정보 가져오기
-          window.Kakao.API.request({
-            url: '/v2/user/me',
-            success: (res) => {
-              const kakaoUser = {
-                id: res.id,
-                nickname: res.properties?.nickname || '사용자',
-                profileImage: res.properties?.profile_image || null,
-                provider: 'kakao'
-              }
-              setUser(kakaoUser)
-              resolve(kakaoUser)
-            },
-            fail: (error) => {
-              console.error('Failed to get user info:', error)
-              reject(error)
-            }
-          })
+        success: async (authObj) => {
+          try {
+            const data = await api.post('/auth/kakao', {
+              accessToken: authObj.access_token,
+            })
+            api.setToken(data.token)
+            const loggedUser = { ...data.user, provider: 'kakao' }
+            setUser(loggedUser)
+            resolve(loggedUser)
+          } catch (err) {
+            reject(err)
+          }
         },
-        fail: (error) => {
-          console.error('Kakao login failed:', error)
-          reject(error)
-        }
+        fail: (error) => reject(error),
       })
     })
   }
 
-  // 데모 로그인 (테스트용)
+  // 데모 로그인 (로컬만, JWT 없음)
   const loginDemo = () => {
     const demoUser = {
       id: 'demo_' + Date.now(),
       nickname: '낚시인' + Math.floor(Math.random() * 1000),
       profileImage: null,
-      provider: 'demo'
+      provider: 'demo',
     }
     setUser(demoUser)
     return demoUser
   }
 
   // 로그아웃
-  const logout = () => {
+  const logout = async () => {
+    if (api.getToken()) {
+      try {
+        await api.post('/auth/logout')
+      } catch {}
+    }
+    api.clearToken()
     if (window.Kakao?.Auth?.getAccessToken()) {
-      window.Kakao.Auth.logout(() => {
-        console.log('Kakao logout')
-      })
+      window.Kakao.Auth.logout(() => {})
     }
     setUser(null)
   }
 
   // 프로필 업데이트
-  const updateProfile = (updates) => {
-    const updatedUser = { ...user, ...updates }
-    setUser(updatedUser)
+  const updateProfile = async (updates) => {
+    if (updates.nickname && api.getToken()) {
+      try {
+        const data = await api.put('/profile/nickname', { nickname: updates.nickname })
+        setUser((prev) => ({ ...prev, ...data }))
+        return
+      } catch {}
+    }
+    setUser((prev) => ({ ...prev, ...updates }))
   }
 
   return (
@@ -116,7 +116,7 @@ export function AuthProvider({ children }) {
         loginWithKakao,
         loginDemo,
         logout,
-        updateProfile
+        updateProfile,
       }}
     >
       {children}

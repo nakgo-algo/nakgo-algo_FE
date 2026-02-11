@@ -1,11 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import regulationsData from '../data/regulationsData.js'
-
-// 지역 목록 (지도 + 바다권역)
-const allRegions = Object.entries(regulationsData).map(([id, d]) => ({
-  id,
-  name: d.name,
-}))
+import api from '../api'
 
 // 실제 대한민국 시도 SVG path — southkorea-maps GeoJSON 기반
 const provinces = [
@@ -132,14 +126,36 @@ export default function RegulationsPage() {
   const [selected, setSelected] = useState('')
   const [search, setSearch] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [regulationsMap, setRegulationsMap] = useState({})
   const searchRef = useRef(null)
 
-  const data = selected ? regulationsData[selected] : null
+  useEffect(() => {
+    api.get('/regulations')
+      .then(list => {
+        const map = {}
+        list.forEach(r => {
+          map[r.id] = {
+            name: r.region,
+            prohibited: r.species.filter(s => s.bannedPeriod).map(s => ({ name: s.name, period: s.bannedPeriod })),
+            minSize: r.species.filter(s => s.minLength > 0).map(s => ({ name: s.name, size: s.minLength })),
+          }
+        })
+        setRegulationsMap(map)
+      })
+      .catch(() => {})
+  }, [])
+
+  const allRegions = useMemo(() => [
+    ...provinces.map(p => ({ id: p.id, name: p.name })),
+    ...seaZones.map(z => ({ id: z.id, name: z.name })),
+  ], [])
+
+  const data = selected ? regulationsMap[selected] : null
 
   const suggestions = useMemo(() => {
     if (!search.trim()) return []
     return allRegions.filter((r) => r.name.includes(search.trim()))
-  }, [search])
+  }, [search, allRegions])
 
   // 외부 클릭 시 자동완성 닫기
   useEffect(() => {
@@ -159,7 +175,7 @@ export default function RegulationsPage() {
   }
 
   return (
-    <div className="h-full gradient-mid pt-16 pb-8 px-5 overflow-y-auto relative">
+    <div className="h-full bg-slate-900 pt-16 pb-8 px-5 overflow-y-auto relative">
       {/* Background accent */}
       <div
         className="absolute top-20 left-0 w-48 h-48 opacity-15 pointer-events-none"
@@ -196,15 +212,10 @@ export default function RegulationsPage() {
 
       {/* Header */}
       <div className="relative z-10 mb-6 pt-4">
-        <div className="flex items-end gap-3 mb-2">
-          <h1 className="font-sans text-[28px] font-semibold text-white/90 tracking-tight leading-none">
-            규정 확인
-          </h1>
-          <span className="font-mono text-[10px] text-white/30 tracking-widest uppercase pb-1">
-            Regulations
-          </span>
-        </div>
-        <p className="font-sans text-[13px] text-white/40 leading-relaxed">
+        <h1 className="text-2xl font-bold text-white mb-1">
+          규정 확인
+        </h1>
+        <p className="text-sm text-slate-400">
           지역을 클릭하거나 검색하여 금어기 / 금지체장을 확인하세요
         </p>
       </div>
@@ -345,14 +356,9 @@ export default function RegulationsPage() {
         <div className="relative z-10 space-y-5 animate-fadeUp">
           {/* Region Header */}
           <div className="mb-2">
-            <div className="flex items-baseline gap-3">
-              <h2 className="font-sans text-[36px] font-extralight text-white/85 tracking-tight">
-                {data.name}
-              </h2>
-              <span className="font-mono text-[10px] text-white/25 tracking-wider">
-                {data.nameEn}
-              </span>
-            </div>
+            <h2 className="font-sans text-[36px] font-extralight text-white/85 tracking-tight">
+              {data.name}
+            </h2>
           </div>
 
           {/* Prohibited / Closed Season */}

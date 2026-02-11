@@ -1,61 +1,44 @@
-import { useState } from 'react'
-
-// 샘플 게시글 데이터
-const samplePosts = [
-  {
-    id: 1,
-    title: '여기 낚시해도 되나요?',
-    author: '바다사랑',
-    date: '2026.02.05 14:32',
-    content: '울산 북구 연암동에 위치한 연암소류지입니다. 저수지 바깥쪽 색은 상관없는건가요? 수년전 낚시 엄청 많이 했었는데...',
-    image: null,
-    comments: 3,
-  },
-  {
-    id: 2,
-    title: '오남저수지 낚시하면안되나여?? ㅠㅠ',
-    author: '낚시초보',
-    date: '2026.02.04 09:15',
-    content: '지도에 빨간색으로 표시되어 있던데 완전 금지인건가요? 주변에 다른 포인트 추천해주세요',
-    image: null,
-    comments: 7,
-  },
-  {
-    id: 3,
-    title: '붕어 30cm 잡았습니다!',
-    author: '민물킹',
-    date: '2026.02.03 18:44',
-    content: '오늘 처음으로 30cm 넘는 붕어 잡았어요. 체장 규정 통과!',
-    image: 'fish',
-    comments: 12,
-  },
-  {
-    id: 4,
-    title: '금어기 확인 부탁드려요',
-    author: '주말낚시',
-    date: '2026.02.02 11:20',
-    content: '우럭 금어기가 4월부터인데 3월 말에 잡으면 괜찮은건가요?',
-    image: null,
-    comments: 5,
-  },
-]
+import { useState, useEffect, useCallback } from 'react'
+import api from '../api'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function CommunityPage() {
+  const { isLoggedIn } = useAuth()
+  const [posts, setPosts] = useState([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [showWriteModal, setShowWriteModal] = useState(false)
+  const [selectedPost, setSelectedPost] = useState(null)
 
-  const filteredPosts = samplePosts.filter(
-    (post) =>
-      post.title.includes(searchQuery) || post.content.includes(searchQuery)
-  )
+  const fetchPosts = useCallback(async () => {
+    try {
+      const params = searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''
+      const data = await api.get(`/posts${params}`)
+      setPosts(data)
+    } catch {
+      setPosts([])
+    }
+    setLoading(false)
+  }, [searchQuery])
+
+  useEffect(() => {
+    setLoading(true)
+    const timer = setTimeout(fetchPosts, 300)
+    return () => clearTimeout(timer)
+  }, [fetchPosts])
+
+  const handlePostCreated = () => {
+    setShowWriteModal(false)
+    fetchPosts()
+  }
 
   return (
     <div className="h-full bg-slate-900 flex flex-col">
       {/* Header */}
       <div className="pt-16 px-5 pb-4 border-b border-slate-800">
-        <h1 className="text-xl font-semibold text-white mb-4">자유게시판</h1>
+        <h1 className="text-2xl font-bold text-white mb-4">자유게시판</h1>
 
-        {/* Search & Filter */}
+        {/* Search */}
         <div className="flex gap-2">
           <div className="flex-1 relative">
             <input
@@ -79,24 +62,26 @@ export default function CommunityPage() {
               />
             </svg>
           </div>
-          <button className="px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-400">
-            내 활동
-          </button>
         </div>
       </div>
 
       {/* Post List */}
       <div className="flex-1 overflow-y-auto">
-        {filteredPosts.length === 0 ? (
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : posts.length === 0 ? (
           <div className="flex items-center justify-center h-40 text-slate-500 text-sm">
             게시글이 없습니다
           </div>
         ) : (
           <div className="divide-y divide-slate-800">
-            {filteredPosts.map((post) => (
+            {posts.map((post) => (
               <article
                 key={post.id}
-                className="px-5 py-4 active:bg-slate-800/50 transition-colors"
+                onClick={() => setSelectedPost(post.id)}
+                className="px-5 py-4 active:bg-slate-800/50 transition-colors cursor-pointer"
               >
                 {/* Title */}
                 <h3 className="text-white font-medium mb-2 line-clamp-1">
@@ -120,20 +105,8 @@ export default function CommunityPage() {
 
                 {/* Image Preview */}
                 {post.image && (
-                  <div className="mb-3 rounded-lg bg-slate-800 h-32 flex items-center justify-center">
-                    <svg
-                      className="w-8 h-8 text-slate-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
+                  <div className="mb-3 rounded-lg bg-slate-800 h-32 flex items-center justify-center overflow-hidden">
+                    <img src={post.image} alt="" className="w-full h-full object-cover" />
                   </div>
                 )}
 
@@ -167,7 +140,13 @@ export default function CommunityPage() {
 
       {/* Write Button (FAB) */}
       <button
-        onClick={() => setShowWriteModal(true)}
+        onClick={() => {
+          if (!isLoggedIn) {
+            alert('로그인이 필요합니다')
+            return
+          }
+          setShowWriteModal(true)
+        }}
         className="fixed bottom-24 right-5 w-14 h-14 bg-teal-600 hover:bg-teal-700 rounded-full shadow-lg flex items-center justify-center transition-colors z-30"
       >
         <svg
@@ -187,46 +166,18 @@ export default function CommunityPage() {
 
       {/* Write Modal */}
       {showWriteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
-          <div className="bg-slate-800 w-full max-w-lg rounded-t-2xl p-5 pb-8 animate-slide-up">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">글쓰기</h2>
-              <button
-                onClick={() => setShowWriteModal(false)}
-                className="p-1 text-slate-400 hover:text-white"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+        <WritePostModal
+          onClose={() => setShowWriteModal(false)}
+          onCreated={handlePostCreated}
+        />
+      )}
 
-            <input
-              type="text"
-              placeholder="제목"
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder:text-slate-500 outline-none focus:border-slate-500 mb-3"
-            />
-
-            <textarea
-              placeholder="내용을 입력하세요"
-              rows={5}
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder:text-slate-500 outline-none focus:border-slate-500 resize-none mb-4"
-            />
-
-            <div className="flex gap-3">
-              <button className="flex-1 py-3 bg-slate-700 text-slate-300 rounded-lg text-sm">
-                사진 첨부
-              </button>
-              <button className="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors">
-                등록하기
-              </button>
-            </div>
-
-            <p className="text-center text-xs text-slate-500 mt-4">
-              * 현재 데모 버전으로 실제 등록되지 않습니다
-            </p>
-          </div>
-        </div>
+      {/* Post Detail Modal */}
+      {selectedPost && (
+        <PostDetailModal
+          postId={selectedPost}
+          onClose={() => setSelectedPost(null)}
+        />
       )}
 
       <style>{`
@@ -238,6 +189,169 @@ export default function CommunityPage() {
           animation: slide-up 0.3s ease-out;
         }
       `}</style>
+    </div>
+  )
+}
+
+function WritePostModal({ onClose, onCreated }) {
+  const [title, setTitle] = useState('')
+  const [content, setContent] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async () => {
+    if (!title.trim() || !content.trim()) {
+      alert('제목과 내용을 입력해주세요')
+      return
+    }
+    setSubmitting(true)
+    try {
+      await api.post('/posts', { title: title.trim(), content: content.trim() })
+      onCreated()
+    } catch {
+      alert('게시글 등록에 실패했습니다')
+    }
+    setSubmitting(false)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
+      <div className="bg-slate-800 w-full max-w-lg rounded-t-2xl p-5 pb-8 animate-slide-up">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white">글쓰기</h2>
+          <button
+            onClick={onClose}
+            className="p-1 text-slate-400 hover:text-white"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="제목"
+          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder:text-slate-500 outline-none focus:border-slate-500 mb-3"
+        />
+
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="내용을 입력하세요"
+          rows={5}
+          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder:text-slate-500 outline-none focus:border-slate-500 resize-none mb-4"
+        />
+
+        <button
+          onClick={handleSubmit}
+          disabled={submitting}
+          className="w-full py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          {submitting ? '등록 중...' : '등록하기'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function PostDetailModal({ postId, onClose }) {
+  const { isLoggedIn } = useAuth()
+  const [post, setPost] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [commentText, setCommentText] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    api.get(`/posts/${postId}`)
+      .then(setPost)
+      .catch(() => onClose())
+      .finally(() => setLoading(false))
+  }, [postId])
+
+  const handleAddComment = async () => {
+    if (!commentText.trim()) return
+    setSubmitting(true)
+    try {
+      const comment = await api.post(`/posts/${postId}/comments`, { text: commentText.trim() })
+      setPost(prev => ({ ...prev, comments: [...(prev.comments || []), comment] }))
+      setCommentText('')
+    } catch {
+      alert('댓글 등록에 실패했습니다')
+    }
+    setSubmitting(false)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
+      <div className="bg-slate-800 w-full max-w-lg rounded-t-2xl max-h-[85vh] flex flex-col animate-slide-up">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-slate-700">
+          <h3 className="text-lg font-semibold text-white">게시글</h3>
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-white">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : post ? (
+          <>
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <h2 className="text-white text-lg font-semibold mb-2">{post.title}</h2>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-xs text-slate-400">{post.author}</span>
+                <span className="text-xs text-slate-600">{post.date}</span>
+              </div>
+              <p className="text-slate-300 text-sm whitespace-pre-wrap mb-6">{post.content}</p>
+
+              {/* Comments */}
+              <div className="border-t border-slate-700 pt-4">
+                <p className="text-xs text-slate-500 mb-3">
+                  댓글 {post.comments?.length || 0}
+                </p>
+                <div className="space-y-3">
+                  {(post.comments || []).map((c) => (
+                    <div key={c.id} className="bg-slate-700/50 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs text-slate-300 font-medium">{c.author}</span>
+                        <span className="text-[10px] text-slate-600">{c.date}</span>
+                      </div>
+                      <p className="text-sm text-slate-400">{c.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Comment Input */}
+            {isLoggedIn && (
+              <div className="p-4 border-t border-slate-700 flex gap-2">
+                <input
+                  type="text"
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="댓글을 입력하세요"
+                  className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm placeholder:text-slate-500 outline-none focus:border-slate-500"
+                />
+                <button
+                  onClick={handleAddComment}
+                  disabled={submitting || !commentText.trim()}
+                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-sm rounded-lg transition-colors"
+                >
+                  {submitting ? '...' : '등록'}
+                </button>
+              </div>
+            )}
+          </>
+        ) : null}
+      </div>
     </div>
   )
 }

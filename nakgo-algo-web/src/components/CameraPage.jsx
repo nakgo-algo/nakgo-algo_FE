@@ -1,35 +1,7 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import api from '../api'
 
 const HF_TOKEN = import.meta.env.VITE_HF_TOKEN || ''
-
-const koreanFishRegulations = {
-  '광어': { minLength: 35, closedSeason: null, warning: null, description: '대표적인 고급 횟감', aliases: ['넙치', '광어', '플라운더'] },
-  '넙치': { minLength: 35, closedSeason: null, warning: null, description: '광어의 정식 명칭', aliases: ['광어', '넙치', '플라운더'] },
-  '우럭': { minLength: 23, closedSeason: '4월 1일 ~ 5월 31일', warning: null, description: '볼락류 중 가장 대형', aliases: ['조피볼락', '우럭', '쥐노래미', '검정우럭', 'black rockfish', 'rockfish', 'sebastes'] },
-  '농어': { minLength: 30, closedSeason: null, warning: null, description: '회유성 어종', aliases: ['농어', '점농어', 'sea bass', 'bass'] },
-  '감성돔': { minLength: 25, closedSeason: '5월 1일 ~ 6월 30일', warning: null, description: '낚시인 인기 대상어', aliases: ['감성돔', '감성', '흑돔', 'black porgy', 'sea bream'] },
-  '참돔': { minLength: 24, closedSeason: null, warning: null, description: '고급 어종', aliases: ['참돔', '도미', 'red sea bream', 'snapper'] },
-  '대구': { minLength: 35, closedSeason: '1월 16일 ~ 2월 15일', warning: null, description: '겨울철 대표 어종', aliases: ['대구', '대구어', 'cod', 'pacific cod'] },
-  '방어': { minLength: 40, closedSeason: null, warning: null, description: '겨울철 최고급 횟감', aliases: ['방어', '부리', 'yellowtail', 'amberjack'] },
-  '고등어': { minLength: 21, closedSeason: null, warning: null, description: '등푸른 생선 대표', aliases: ['고등어', '등푸른생선', 'mackerel'] },
-  '삼치': { minLength: 35, closedSeason: null, warning: null, description: '가을철 대표 낚시어', aliases: ['삼치', 'spanish mackerel'] },
-  '전갱이': { minLength: 15, closedSeason: null, warning: null, description: '방파제 낚시 인기', aliases: ['전갱이', '메가리', 'horse mackerel', 'jack mackerel'] },
-  '볼락': { minLength: 15, closedSeason: '4월 1일 ~ 5월 31일', warning: null, description: '야간 낚시 인기', aliases: ['볼락', '열기', 'rockfish'] },
-  '숭어': { minLength: 25, closedSeason: null, warning: null, description: '겨울 회가 맛있음', aliases: ['숭어', '가숭어', 'mullet'] },
-  '갈치': { minLength: null, closedSeason: null, warning: '날카로운 이빨 주의', description: '은빛 긴 몸체', aliases: ['갈치', '먹갈치', 'cutlassfish', 'hairtail'] },
-  '복어': { minLength: null, closedSeason: null, warning: '맹독 주의!', description: '독성 어종', aliases: ['복어', '참복', '까치복', 'puffer', 'fugu', 'blowfish'] },
-  '가오리': { minLength: null, closedSeason: null, warning: '꼬리 독침 주의!', description: '납작한 몸체', aliases: ['가오리', '홍어', '노랑가오리', 'ray', 'stingray', 'skate'] },
-  '배스': { minLength: null, closedSeason: null, warning: '생태계교란종', description: '민물 포식자', aliases: ['배스', '베스', '큰입배스', 'largemouth bass', 'black bass'] },
-  '붕어': { minLength: null, closedSeason: null, warning: null, description: '민물낚시 대표', aliases: ['붕어', '떡붕어', 'crucian carp'] },
-  '잉어': { minLength: null, closedSeason: null, warning: null, description: '대형 민물고기', aliases: ['잉어', '비단잉어', 'carp', 'koi'] },
-  '연어': { minLength: 40, closedSeason: '10월~11월', warning: null, description: '회유성 어종', aliases: ['연어', '은연어', 'salmon'] },
-  '송어': { minLength: null, closedSeason: null, warning: null, description: '냉수 민물고기', aliases: ['송어', '무지개송어', 'trout'] },
-  '참치': { minLength: null, closedSeason: null, warning: null, description: '대형 회유어종', aliases: ['참치', '다랑어', 'tuna', 'bluefin'] },
-  '오징어': { minLength: null, closedSeason: null, warning: null, description: '에깅 낚시 인기', aliases: ['오징어', '한치', 'squid'] },
-  '문어': { minLength: null, closedSeason: null, warning: null, description: '문어낚시 인기', aliases: ['문어', '낙지', 'octopus'] },
-}
-
-const fishList = Object.keys(koreanFishRegulations)
 
 export default function CameraPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -37,7 +9,24 @@ export default function CameraPage() {
   const [previewUrl, setPreviewUrl] = useState(null)
   const [error, setError] = useState(null)
   const [showManualSelect, setShowManualSelect] = useState(false)
+  const [speciesList, setSpeciesList] = useState([])
   const fileInputRef = useRef(null)
+
+  useEffect(() => {
+    api.get('/fish/species')
+      .then(setSpeciesList)
+      .catch(() => {})
+  }, [])
+
+  const fishList = speciesList.map(s => s.name)
+  const regulationMap = Object.fromEntries(
+    speciesList.map(s => [s.name, { minLength: s.minLength, bannedMonths: s.bannedMonths }])
+  )
+
+  const formatBannedMonths = (months) => {
+    if (!months || months.length === 0) return null
+    return `${months[0]}월 ~ ${months[months.length - 1]}월`
+  }
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0]
@@ -64,7 +53,6 @@ export default function CameraPage() {
   const analyzeWithHuggingFace = async (file) => {
     try {
       const base64 = await fileToBase64(file)
-
       const fishNames = fishList.join(', ')
 
       const response = await fetch('/hf-api/v1/chat/completions', {
@@ -107,10 +95,11 @@ export default function CameraPage() {
       const matchedFish = matchFishFromAnswer(answer)
 
       if (matchedFish) {
-        const reg = koreanFishRegulations[matchedFish]
+        const reg = regulationMap[matchedFish]
         setResult({
           isFish: true, name: matchedFish, aiResponse: answer, confidence: 85,
-          ...reg
+          minLength: reg?.minLength || null,
+          closedSeason: formatBannedMonths(reg?.bannedMonths),
         })
       } else if (!answer.includes('물고기 아님') && !answer.includes('아닙니다') && !answer.includes('아님')) {
         setResult({ isFish: true, name: '어종 미확인', aiResponse: answer, confidence: 40 })
@@ -127,25 +116,22 @@ export default function CameraPage() {
 
   const matchFishFromAnswer = (answer) => {
     const cleaned = answer.trim()
-    // 1) 정확히 목록에 있는 이름인지
-    for (const name of Object.keys(koreanFishRegulations)) {
+    for (const name of fishList) {
       if (cleaned === name) return name
     }
-    // 2) 응답에 목록 이름이 포함되어 있는지
-    for (const name of Object.keys(koreanFishRegulations)) {
+    for (const name of fishList) {
       if (answer.includes(name)) return name
-    }
-    // 3) aliases로 매칭
-    const lower = answer.toLowerCase()
-    for (const [name, data] of Object.entries(koreanFishRegulations)) {
-      if (data.aliases?.some(a => lower.includes(a.toLowerCase()))) return name
     }
     return null
   }
 
   const handleManualSelect = (fishName) => {
-    const reg = koreanFishRegulations[fishName]
-    setResult({ isFish: true, name: fishName, confidence: 100, ...reg })
+    const reg = regulationMap[fishName]
+    setResult({
+      isFish: true, name: fishName, confidence: 100,
+      minLength: reg?.minLength || null,
+      closedSeason: formatBannedMonths(reg?.bannedMonths),
+    })
     setShowManualSelect(false)
   }
 
@@ -242,7 +228,6 @@ export default function CameraPage() {
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h3 className="text-xl font-semibold text-white">{result.name}</h3>
-                  {result.description && <p className="text-slate-400 text-sm">{result.description}</p>}
                 </div>
                 {result.confidence && (
                   <span className="text-xs text-slate-500">{result.confidence}%</span>
@@ -266,13 +251,6 @@ export default function CameraPage() {
                     </div>
                   )}
                 </div>
-              )}
-
-              {/* Warning */}
-              {result.warning && (
-                <p className="text-red-400 text-sm mt-3 pt-3 border-t border-slate-700">
-                  ⚠ {result.warning}
-                </p>
               )}
 
               {result.confidence < 100 && (

@@ -80,7 +80,7 @@ export default function ProfilePage({ onNavigate }) {
     <div className="h-full bg-slate-900 overflow-y-auto">
       {/* Header */}
       <div className="pt-16 px-5 pb-6">
-        <h1 className="text-xl font-semibold text-white">내 프로필</h1>
+        <h1 className="text-2xl font-bold text-white">내 프로필</h1>
       </div>
 
       {/* Profile Card */}
