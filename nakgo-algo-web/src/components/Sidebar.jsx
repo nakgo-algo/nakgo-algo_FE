@@ -15,6 +15,7 @@ const navLabels = [
 
 export default function Sidebar({ isOpen, onClose, currentPage, onNavigate }) {
   const { user, isLoggedIn } = useAuth()
+  const isAdmin = user?.isAdmin
   const sidebarRef = useRef(null)
   const startXRef = useRef(0)
   const currentXRef = useRef(0)
@@ -182,6 +183,38 @@ export default function Sidebar({ isOpen, onClose, currentPage, onNavigate }) {
               </button>
             )
           })}
+
+          {/* Admin: Content Moderation */}
+          {isAdmin && (
+            <>
+              <div className="mx-6 my-2 border-t border-white/10" />
+              <button
+                onClick={() => handleNavClick('moderation')}
+                className={`flex items-center gap-4 px-6 py-3.5 bg-transparent border-none cursor-pointer text-left transition-all duration-200 ${
+                  currentPage === 'moderation'
+                    ? 'bg-white/10'
+                    : 'hover:bg-white/5 active:bg-white/10'
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full transition-all duration-200 ${
+                    currentPage === 'moderation'
+                      ? 'bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.6)]'
+                      : 'bg-yellow-500/40'
+                  }`}
+                />
+                <span
+                  className={`font-sans text-[14px] tracking-wide transition-all duration-200 ${
+                    currentPage === 'moderation'
+                      ? 'font-semibold text-white'
+                      : 'font-normal text-yellow-400/70'
+                  }`}
+                >
+                  콘텐츠 검토
+                </span>
+              </button>
+            </>
+          )}
         </nav>
 
         {/* Disclaimer */}

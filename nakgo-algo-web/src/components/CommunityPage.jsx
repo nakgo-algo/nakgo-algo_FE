@@ -307,6 +307,15 @@ function WritePostModal({ onClose, onCreated }) {
   )
 }
 
+const DELETE_REASONS = [
+  '욕설/비속어',
+  '음란내용',
+  '스팸/광고',
+  '허위정보',
+  '개인정보 노출',
+  '기타',
+]
+
 function PostDetailModal({ postId, onClose, onDeleted }) {
   const { isLoggedIn, user } = useAuth()
   const isAdmin = user?.isAdmin
@@ -315,6 +324,9 @@ function PostDetailModal({ postId, onClose, onDeleted }) {
   const [commentText, setCommentText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showDeleteReasonModal, setShowDeleteReasonModal] = useState(false)
+  const [selectedReason, setSelectedReason] = useState('')
+  const [customReason, setCustomReason] = useState('')
 
   useEffect(() => {
     api.get(`/posts/${postId}`)
@@ -337,10 +349,32 @@ function PostDetailModal({ postId, onClose, onDeleted }) {
   }
 
   const handleDelete = async () => {
+    // 어드민이 타인 게시글 삭제 시 → 사유 모달
+    if (isAdmin && post && post.userId !== user?.id) {
+      setShowDeleteReasonModal(true)
+      return
+    }
+    // 본인 게시글 삭제
     if (!confirm('게시글을 삭제하시겠습니까?')) return
     setDeleting(true)
     try {
       await api.delete(`/posts/${postId}`)
+      onDeleted?.()
+    } catch {
+      alert('삭제에 실패했습니다')
+      setDeleting(false)
+    }
+  }
+
+  const handleAdminDelete = async () => {
+    const reason = selectedReason === '기타' ? customReason.trim() : selectedReason
+    if (!reason) {
+      alert('삭제 사유를 선택해주세요')
+      return
+    }
+    setDeleting(true)
+    try {
+      await api.put(`/posts/${postId}/admin-delete`, { reason })
       onDeleted?.()
     } catch {
       alert('삭제에 실패했습니다')
@@ -438,6 +472,59 @@ function PostDetailModal({ postId, onClose, onDeleted }) {
           </>
         ) : null}
       </div>
+
+      {/* Admin Delete Reason Modal */}
+      {showDeleteReasonModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] px-5">
+          <div className="bg-slate-800 rounded-2xl p-5 w-full max-w-sm">
+            <h3 className="text-white font-semibold mb-1">삭제 사유 선택</h3>
+            <p className="text-slate-500 text-xs mb-4">사용자에게 삭제 사유가 알림으로 전달됩니다</p>
+
+            <div className="space-y-2 mb-4">
+              {DELETE_REASONS.map((reason) => (
+                <button
+                  key={reason}
+                  onClick={() => { setSelectedReason(reason); if (reason !== '기타') setCustomReason('') }}
+                  className={`w-full text-left px-4 py-2.5 rounded-lg text-sm transition-colors ${
+                    selectedReason === reason
+                      ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                      : 'bg-slate-700 text-slate-300 border border-transparent hover:bg-slate-600'
+                  }`}
+                >
+                  {reason}
+                </button>
+              ))}
+            </div>
+
+            {selectedReason === '기타' && (
+              <input
+                type="text"
+                value={customReason}
+                onChange={(e) => setCustomReason(e.target.value)}
+                placeholder="사유를 직접 입력하세요"
+                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white text-sm placeholder:text-slate-500 outline-none focus:border-slate-500 mb-4"
+                maxLength={200}
+              />
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowDeleteReasonModal(false); setSelectedReason(''); setCustomReason('') }}
+                className="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm rounded-lg transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleAdminDelete}
+                disabled={deleting || !selectedReason || (selectedReason === '기타' && !customReason.trim())}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors disabled:opacity-50"
+              >
+                {deleting ? '삭제 중...' : '삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
