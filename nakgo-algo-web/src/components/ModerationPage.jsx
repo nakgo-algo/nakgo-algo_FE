@@ -10,47 +10,22 @@ export default function ModerationPage() {
   const [deleteModal, setDeleteModal] = useState(null)
   const [deleteReason, setDeleteReason] = useState('')
 
-  const fetchRequests = async () => {
-    try {
-      const data = await api.get('/moderation?status=pending')
-      setRequests(data)
-    } catch {
-      setRequests([])
-    }
-    setLoading(false)
-  }
-
   useEffect(() => {
-    fetchRequests()
+    api.get('/moderation?status=pending').then(setRequests).catch(() => setRequests([])).finally(() => setLoading(false))
   }, [])
 
-  const handleIgnore = async (id) => {
+  const handleResolve = async (id, action, reason) => {
+    if (action === 'delete' && !reason?.trim()) return toast.warn('삭제 사유를 입력해주세요')
     setResolving(id)
     try {
-      await api.put(`/moderation/${id}/resolve`, { action: 'ignore' })
+      await api.put(`/moderation/${id}/resolve`, { action, ...(reason && { deleteReason: reason.trim() }) })
       setRequests(prev => prev.filter(r => r.id !== id))
+      if (action === 'delete') { setDeleteModal(null); setDeleteReason('') }
     } catch {
       toast.error('처리에 실패했습니다')
+    } finally {
+      setResolving(null)
     }
-    setResolving(null)
-  }
-
-  const handleDelete = async () => {
-    if (!deleteReason.trim()) {
-      toast.warn('삭제 사유를 입력해주세요')
-      return
-    }
-    const id = deleteModal
-    setResolving(id)
-    try {
-      await api.put(`/moderation/${id}/resolve`, { action: 'delete', deleteReason: deleteReason.trim() })
-      setRequests(prev => prev.filter(r => r.id !== id))
-      setDeleteModal(null)
-      setDeleteReason('')
-    } catch {
-      toast.error('처리에 실패했습니다')
-    }
-    setResolving(null)
   }
 
   return (
@@ -114,7 +89,7 @@ export default function ModerationPage() {
                     삭제
                   </button>
                   <button
-                    onClick={() => handleIgnore(r.id)}
+                    onClick={() => handleResolve(r.id, 'ignore')}
                     disabled={resolving === r.id}
                     className="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
                   >
@@ -148,7 +123,7 @@ export default function ModerationPage() {
                 취소
               </button>
               <button
-                onClick={handleDelete}
+                onClick={() => handleResolve(deleteModal, 'delete', deleteReason)}
                 disabled={resolving === deleteModal}
                 className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors disabled:opacity-50"
               >
